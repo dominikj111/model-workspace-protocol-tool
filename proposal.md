@@ -14,7 +14,7 @@ A comprehensive proposal for a deterministic workspace mapper, with a later MCP 
 
 Van Clief's Model Workspace Protocol is originally about structural project documentation — small, focused markdown files organized alongside the code, each describing one thing at one scope level: project identity, domain rules, stage contracts, reference material. That documentation layer is the raw material this tool works with.
 
-This tool is a **workspace mapper**. Given a target (a file path or stage folder), it walks the project tree, reads the structural documentation layer — `CONTEXT.md`-class files along the cascade — parses their frontmatter, resolves imports from community modules, optionally runs verification scripts, and produces a **workspace map**: a structured, layered, bounded artifact that tells the LLM how to navigate and approach work in this part of the project.
+This tool is a **workspace mapper**. Given a target (a file path or stage folder), it walks the project tree, reads the structural documentation layer — `.mwp-context.md`-class files along the cascade — parses their frontmatter, resolves imports from community modules, optionally runs verification scripts, and produces a **workspace map**: a structured, layered, bounded artifact that tells the LLM how to navigate and approach work in this part of the project.
 
 The map is not content. A topographic map does not contain the mountain — it contains enough structured information about the mountain to reason about routes without walking every path. The workspace map does not contain the source code. It contains enough structured information about the codebase — conventions, constraints, intent, and verified invariants — that the LLM can orient itself and begin work without re-deriving all of that from scratch on every session. Source code remains primary. The markdown files are not a replacement for the code; they are the map layer that sits alongside it. The LLM reads the map first, then navigates the actual terrain as needed.
 
@@ -79,7 +79,7 @@ imports:
   - git: https://github.com/mwp-community/trpc-fullstack.git@v1.0.0
 ```
 
-Each of those modules is a curated set of context files — `CONTEXT.md`, `RULES.md`, `SKILLS/`, and potentially pre-computed analysis artifacts — assembled by people who have spent serious time with that stack and have encoded what "thinking like a senior Rust developer" or "approaching this as a Cloud-Native AWS architect" actually means in practice. They may be published as Git repos, npm packages, or Cargo crates — the import mechanism is the same; the mapping step resolves them via their installed path.
+Each of those modules is a curated set of context files — `.mwp-context.md` files and any supporting markdown they reference — assembled by people who have spent serious time with that stack and have encoded what "thinking like a senior Rust developer" or "approaching this as a Cloud-Native AWS architect" actually means in practice. They may be published as Git repos, npm packages, or Cargo crates — the import mechanism is the same; the mapping step resolves them via their installed path.
 
 The LLM that loads these modules is not a general-purpose assistant that happens to know Rust. For this session, it is a developer who thinks the way your team thinks — with idiomatic patterns, the anti-patterns flagged, the deployment model baked in, the constraint set established. No fine-tuning, no specialist agent, no context hand-off.
 
@@ -93,7 +93,7 @@ The pattern of sharing configuration as versioned packages already exists in som
 
 Doing this by hand is possible — it is what the author currently does — but it has clear failure modes:
 
-- **Token bloat** — naive concatenation of every parent `CONTEXT.md` quickly overshoots the 8 k sweet spot.
+- **Token bloat** — naive concatenation of every parent `.mwp-context.md` quickly overshoots the 8 k sweet spot.
 - **Drift** — references claim invariants that the codebase no longer satisfies. No one notices until the LLM produces confidently wrong output.
 - **Reinvention** — orientation context that describes a technology stack or architectural approach tends to be written per-project, making it hard to share, review, or keep consistent across related work.
 - **Opaque assembly** — when something goes wrong, there is no record of *why* a given snippet ended up in the prompt.
@@ -128,7 +128,7 @@ If any of these turn out to be valuable later, they are separate proposals.
 6. **Filesystem as architecture.** The tree is the spine. Frontmatter is the connective tissue. Code is a signal, not a source of truth for intent.
 7. **Static by default, dynamic on request.** File reads are free; script execution requires explicit opt-in and is cached.
 8. **CLI first, MCP second.** A useful CLI we can run in CI, IDEs, and shells must exist before we wrap it in any LLM protocol.
-9. **CONTEXT.md is the extension interface.** New mapper capabilities are expressed as new CONTEXT.md frontmatter fields or new `.mwp-root` declarations. General capabilities belong in the core. Domain-specific capabilities belong in community modules. This division keeps the core small and lets the community grow the capability surface without forking the tool.
+9. **.mwp-context.md is the extension interface.** New mapper capabilities are expressed as new .mwp-context.md frontmatter fields or new `.mwp` declarations. General capabilities belong in the core. Domain-specific capabilities belong in community modules. This division keeps the core small and lets the community grow the capability surface without forking the tool.
 
 ---
 
@@ -140,7 +140,7 @@ The mapper produces a **workspace map** for a **target** (a file path or a stage
 Target
   │
   ▼
-1. Anchor discovery       (find .mwp-root / project root)
+1. Anchor discovery       (find .mwp / project root)
   │
   ▼
 2. Cascade traversal       (root → ... → target's directory)
@@ -174,7 +174,7 @@ The intended interaction model has two phases:
 
 2. **Lensing.** Having read the orientation map, the LLM identifies which sub-project, directory, or file the query is about, then calls `map_workspace(target)` to fetch the focused map for that area. Only then does it begin working — from the deep, conventions-loaded, verified context for the actual target.
 
-The instruction to perform step 2 must be embedded in the orientation map's preamble, because the LLM cannot know to follow this pattern unless the first map tells it to. A project with good CONTEXT.md coverage at each level makes lensing powerful: the LLM narrows from "this is a polyglot monorepo" → "this is the TypeScript backend" → "this is the orders API module" and by the time it reaches the work it has exactly the context that scope requires — without loading the Rust or ViteJS conventions that are irrelevant for the task.
+The instruction to perform step 2 must be embedded in the orientation map's preamble, because the LLM cannot know to follow this pattern unless the first map tells it to. A project with good .mwp-context.md coverage at each level makes lensing powerful: the LLM narrows from "this is a polyglot monorepo" → "this is the TypeScript backend" → "this is the orders API module" and by the time it reaches the work it has exactly the context that scope requires — without loading the Rust or ViteJS conventions that are irrelevant for the task.
 
 Two passes — **traverse** then **render** — separated by a stable intermediate representation (IR). The IR is what the MCP server returns and what CI can diff.
 
@@ -184,12 +184,12 @@ Project structure:
 
 ```text
 project/
-├── .mwp-root
-├── CONTEXT.md              ← L0: "browser SDK for EU logistics platform"
+├── .mwp
+├── .mwp-context.md              ← L0: "browser SDK for EU logistics platform"
 ├── dev/
-│   ├── CONTEXT.md          ← L1: "Rust+TypeScript; tRPC bridge; no runtime reflection"
+│   ├── .mwp-context.md          ← L1: "Rust+TypeScript; tRPC bridge; no runtime reflection"
 │   └── browser-sdk/
-│       ├── CONTEXT.md      ← L3: "owns TS→Rust boundary; bundle < 50 KB compressed"
+│       ├── .mwp-context.md      ← L3: "owns TS→Rust boundary; bundle < 50 KB compressed"
 │       │   guards:
 │       │     - cmd: ./bundle-size-check.sh
 │       └── src/
@@ -235,16 +235,16 @@ We adopt a small, explicit convention. Everything else is the user's choice.
 
 ### 5.1 Anchor
 
-A project is rooted at a `.mwp-root` file. The same format serves two distinct roles depending on whether it is the nearest anchor or has a parent:
+A project is rooted at a `.mwp` file. The same format serves two distinct roles depending on whether it is the nearest anchor or has a parent:
 
-**Standalone project root** — the nearest `.mwp-root` walking up from the target. `workspace:` imports resolve relative to this file. Simple case: one project, one anchor, no nesting.
+**Standalone project root** — the nearest `.mwp` walking up from the target. `workspace:` imports resolve relative to this file. Simple case: one project, one anchor, no nesting.
 
-**Workspace root (monorepo)** — a `.mwp-root` that declares `members`. Each member is a sub-project that has its own `.mwp-root`. The mapper walks up from the target file twice: first to find the sub-project root (nearest `.mwp-root`), then to find the workspace root (nearest ancestor `.mwp-root` with `members`). `workspace:` imports resolve relative to the workspace root, not the sub-project root.
+**Workspace root (monorepo)** — a `.mwp` that declares `members`. Each member is a sub-project that has its own `.mwp`. The mapper walks up from the target file twice: first to find the sub-project root (nearest `.mwp`), then to find the workspace root (nearest ancestor `.mwp` with `members`). `workspace:` imports resolve relative to the workspace root, not the sub-project root.
 
 This mirrors the Cargo workspace / npm workspace model: each member is independently usable, and the workspace root is the meta-manifest that knows about all of them.
 
 ```toml
-# .mwp-root  (workspace root — knows about all sub-projects)
+# .mwp  (workspace root — knows about all sub-projects)
 name        = "myproject"
 description = "Polyglot monorepo — Rust engine, TS backend, ViteJS frontend"
 
@@ -276,10 +276,10 @@ allowed_guards = ["cargo test", "npm run typecheck", "pnpm typecheck"]
 window = 0
 ```
 
-Each member has a minimal `.mwp-root` that makes it independently usable:
+Each member has a minimal `.mwp` that makes it independently usable:
 
 ```toml
-# engine/.mwp-root  (sub-project root)
+# engine/.mwp  (sub-project root)
 name        = "engine"
 description = "Rust processing core — shared event processing and HTTP API"
 # No members, no directories — those live at the workspace root.
@@ -287,18 +287,18 @@ description = "Rust processing core — shared event processing and HTTP API"
 ```
 
 ```toml
-# packages/.mwp-root  (shared modules — sub-project root)
+# packages/.mwp  (shared modules — sub-project root)
 name        = "shared-packages"
 description = "Shared TypeScript types and utilities, consumed by backend and frontend"
 ```
 
-**Standalone behaviour.** Running `mwp` from inside `engine/` alone — without the parent workspace present — produces a valid map anchored at `engine/.mwp-root`. In that context, `workspace:` imports are unavailable (there is no workspace root to resolve against) and the mapper reports a warning for any unresolvable `workspace:` reference, then continues with the remaining context. The sub-project degrades gracefully; it does not fail.
+**Standalone behaviour.** Running `mwp` from inside `engine/` alone — without the parent workspace present — produces a valid map anchored at `engine/.mwp`. In that context, `workspace:` imports are unavailable (there is no workspace root to resolve against) and the mapper reports a warning for any unresolvable `workspace:` reference, then continues with the remaining context. The sub-project degrades gracefully; it does not fail.
 
-**External importability.** Because `packages/` has its own `.mwp-root`, it is a self-contained workspace. External projects can reference it as a `git:` import and receive its full context cascade — `CONTEXT.md` files, conventions, guards — without needing the monorepo root. This is the mechanism by which a shared-modules sub-project becomes a publishable community module without any manual packaging step.
+**External importability.** Because `packages/` has its own `.mwp`, it is a self-contained workspace. External projects can reference it as a `git:` import and receive its full context cascade — `.mwp-context.md` files, conventions, guards — without needing the monorepo root. This is the mechanism by which a shared-modules sub-project becomes a publishable community module without any manual packaging step.
 
-Fallback chain when no `.mwp-root` is found anywhere in the walk: `.git/`, then explicit `--root` flag. We never guess based on `README.md` or top-level manifests — that fails in monorepos.
+Fallback chain when no `.mwp` is found anywhere in the walk: `.git/`, then explicit `--root` flag. We never guess based on `README.md` or top-level manifests — that fails in monorepos.
 
-**Windowed rendering.** In a deep project tree the full cascade from root to a leaf file can accumulate more ancestor context than the task needs. The `window` field in `[render]` sets a global cap: `window = 3` means "include at most 3 ancestor levels above the target, plus L0 always." Per-directory CONTEXT.md can tighten this further:
+**Windowed rendering.** In a deep project tree the full cascade from root to a leaf file can accumulate more ancestor context than the task needs. The `window` field in `[render]` sets a global cap: `window = 3` means "include at most 3 ancestor levels above the target, plus L0 always." Per-directory .mwp-context.md can tighten this further:
 
 ```yaml
 ---
@@ -310,11 +310,11 @@ Default is `0` (full cascade) because the safe failure mode is too much context,
 
 ### 5.2 Context files
 
-**`CONTEXT.md` is optional at every directory level.** The mapper never requires it. When traversing the cascade, it checks for a `CONTEXT.md` at each directory; if none is present, that level contributes nothing to the map and the traversal continues. A project with no `CONTEXT.md` files at all still produces a useful map — the LLM receives the directory topology from `.mwp-root`, the target path itself (which carries implicit information about where the work lives), and the generated preamble. That is a working starting point.
+**`.mwp-context.md` is optional at every directory level.** The mapper never requires it. When traversing the cascade, it checks for a `.mwp-context.md` at each directory; if none is present, that level contributes nothing to the map and the traversal continues. A project with no `.mwp-context.md` files at all still produces a useful map — the LLM receives the directory topology from `.mwp`, the target path itself (which carries implicit information about where the work lives), and the generated preamble. That is a working starting point.
 
-This means adoption is incremental: start with just `.mwp-root`, add `CONTEXT.md` where a directory has conventions worth stating, and grow coverage over time. A missing `CONTEXT.md` is a gap in enrichment, not an error.
+This means adoption is incremental: start with just `.mwp`, add `.mwp-context.md` where a directory has conventions worth stating, and grow coverage over time. A missing `.mwp-context.md` is a gap in enrichment, not an error.
 
-`CONTEXT.md` is the **index file** for its directory's context when present — analogous to `index.js` / `index.ts` in a JavaScript module, `mod.rs` in Rust, or `__init__.py` in Python. When the mapper reaches a directory that has one, `CONTEXT.md` is the entry point: it defines the scope for that level, lists any additional files to include from the same directory or its subdirectories, and optionally imports external modules. Like a module index file, it can reference siblings and children — but not parents.
+`.mwp-context.md` is the **index file** for its directory's context when present — analogous to `index.js` / `index.ts` in a JavaScript module, `mod.rs` in Rust, or `__init__.py` in Python. When the mapper reaches a directory that has one, `.mwp-context.md` is the entry point: it defines the scope for that level, lists any additional files to include from the same directory or its subdirectories, and optionally imports external modules. Like a module index file, it can reference siblings and children — but not parents.
 
 ```markdown
 ---
@@ -349,7 +349,7 @@ Three import kinds, each with a distinct resolution rule:
 | Import kind | Path anchor | Use for |
 | ----------- | ----------- | ------- |
 | `local:` | declaring file's directory | files within the same sub-project |
-| `workspace:` | `.mwp-root` directory | sibling sub-projects in a monorepo |
+| `workspace:` | `.mwp` directory | sibling sub-projects in a monorepo |
 | `git:` | fetched into `.mwp/modules/` | external community modules |
 
 `local:` path scoping:
@@ -364,25 +364,14 @@ Three import kinds, each with a distinct resolution rule:
 
 `../` is never needed for ancestor context because the cascade delivers it for free. It is flagged by `mwp lint`. For cross-sibling references in a monorepo, `workspace:` is the correct mechanism — it makes the horizontal dependency explicit and anchors the path at the project root rather than the declaring file, which makes refactoring and tooling validation straightforward.
 
-Other recognised filenames map to common roles, all opt-in:
-
-| Filename                 | Default layer | Default scope |
-| ------------------------ | ------------- | ------------- |
-| `CONTEXT.md`             | inferred      | recursive     |
-| `RULES.md`               | 3             | recursive     |
-| `PERSPECTIVE.md`         | 3             | recursive     |
-| `SKILLS/<name>.md`       | 3             | recursive     |
-| `<NN>_<stage>/00_intent.md` | 2          | local         |
-| `<NN>_<stage>/output.md` | 4             | local         |
-
-Filename conventions are defaults, not constraints — explicit frontmatter wins. This keeps existing repositories with non-standard layouts usable without renaming.
+`.mwp-context.md` is the only reserved filename. Any additional files a team wants to include — rules, conventions, reference material — should be referenced from within `.mwp-context.md` using `local:` imports. There is no prescribed layout beyond the index file itself.
 
 ### 5.3 Modules
 
 Three import kinds, all deterministic:
 
 - **`local:`** — a relative path to a directory or file within the declaring directory's subtree. Resolved at parse time. Cycles are an error.
-- **`workspace:`** — a path relative to `.mwp-root`. Crosses sub-project boundaries within a monorepo. The path must resolve to within the workspace root — no escaping the project.
+- **`workspace:`** — a path relative to `.mwp`. Crosses sub-project boundaries within a monorepo. The path must resolve to within the workspace root — no escaping the project.
 - **`git:`** — a Git URL with an immutable ref (tag or commit SHA). Cloned into `.mwp/modules/<sha>/` and treated as a local import from then on. A floating ref (a branch name) is rejected unless `--allow-floating` is passed.
 
 No bespoke registry, no package manager dependency. Published npm or Cargo conventions can be imported via `local:` using their installed path within the subtree.
@@ -394,7 +383,7 @@ imports:
 
 # Import from a sibling sub-project (monorepo, workspace-relative):
 imports:
-  - workspace: packages/shared-types   # path from .mwp-root, not from this file
+  - workspace: packages/shared-types   # path from .mwp, not from this file
 
 # Import via installed npm package (within the current subtree):
 imports:
@@ -413,24 +402,24 @@ A concrete example — Rust engine + TypeScript backend + ViteJS frontend + shar
 
 ```text
 project/
-├── .mwp-root                      # anchor; declares all sub-projects
-├── CONTEXT.md                     # L0: project identity, architecture overview
+├── .mwp                      # anchor; declares all sub-projects
+├── .mwp-context.md                     # L0: project identity, architecture overview
 ├── engine/                        # Rust processing core
-│   └── CONTEXT.md                 # stack: rust; imports mwp-stack-rust-axum
+│   └── .mwp-context.md                 # stack: rust; imports mwp-stack-rust-axum
 ├── backend/                       # Node.js/TypeScript API
-│   └── CONTEXT.md                 # stack: nodejs+ts; imports packages/ context
+│   └── .mwp-context.md                 # stack: nodejs+ts; imports packages/ context
 ├── frontend/                      # ViteJS/TypeScript UI
-│   └── CONTEXT.md                 # stack: vitejs; imports packages/ context
-├── packages/                      # shared local modules (shared = true in .mwp-root)
-│   ├── CONTEXT.md                 # describes the shared type contracts and module boundaries
+│   └── .mwp-context.md                 # stack: vitejs; imports packages/ context
+├── packages/                      # shared local modules (shared = true in .mwp)
+│   ├── .mwp-context.md                 # describes the shared type contracts and module boundaries
 │   ├── shared-types/
 │   └── shared-utils/
 ├── scripts/                       # build and deployment scripts
-│   └── CONTEXT.md                 # optional: scripting conventions, tool assumptions
-└── docker-compose.yml             # orchestration (declared in .mwp-root topology; no CONTEXT.md needed)
+│   └── .mwp-context.md                 # optional: scripting conventions, tool assumptions
+└── docker-compose.yml             # orchestration (declared in .mwp topology; no .mwp-context.md needed)
 ```
 
-`backend/CONTEXT.md`:
+`backend/.mwp-context.md`:
 ```yaml
 ---
 layer: 1
@@ -440,7 +429,7 @@ imports:
 ---
 ```
 
-`frontend/CONTEXT.md`:
+`frontend/.mwp-context.md`:
 ```yaml
 ---
 layer: 1
@@ -451,32 +440,33 @@ imports:
 ```
 
 When editing `backend/src/api/routes.ts`, the resolved cascade is:
-1. Root `CONTEXT.md` — project identity and full topology (L0)
-2. `backend/CONTEXT.md` — backend conventions, with `packages/` context spliced in
-3. `backend/src/api/CONTEXT.md` — if present (L2 stage contract or local rules)
+
+1. Root `.mwp-context.md` — project identity and full topology (L0)
+2. `backend/.mwp-context.md` — backend conventions, with `packages/` context spliced in
+3. `backend/src/api/.mwp-context.md` — if present (L2 stage contract or local rules)
 
 The engine, frontend, and scripts contexts are not in scope — they are adjacent sub-projects, not ancestors. The LLM sees exactly the layers relevant to the backend API without loading the Rust stack or the ViteJS conventions.
 
-The `docker-compose.yml` entry in `.mwp-root`'s `[directories]` table appears only in the L0 topology overview — it tells the LLM "this is how the sub-projects are wired together in development" without pulling orchestration detail into every file-level map.
+The `docker-compose.yml` entry in `.mwp`'s `[directories]` table appears only in the L0 topology overview — it tells the LLM "this is how the sub-projects are wired together in development" without pulling orchestration detail into every file-level map.
 
 **`shared = true` sub-projects** are a signal to `mwp doctor` that every sub-project that uses the shared directory should have an explicit `workspace:` import pointing to it. Missing imports are reported as warnings — not errors, because the decision to include shared context is always explicit, never injected.
 
 #### Deduplication — single include, closest to root
 
-If the same resource appears in multiple cascade levels — because two `CONTEXT.md` files both import the same git module, or both reference the same local file — it is included **once**, at the position of the highest (closest to root) reference. Lower references are silently dropped.
+If the same resource appears in multiple cascade levels — because two `.mwp-context.md` files both import the same git module, or both reference the same local file — it is included **once**, at the position of the highest (closest to root) reference. Lower references are silently dropped.
 
 ```text
 project/
-├── CONTEXT.md          imports: [git: mwp-rust-idiomatic@v2]   ← included here
+├── .mwp-context.md          imports: [git: mwp-rust-idiomatic@v2]   ← included here
 └── dev/
-    └── CONTEXT.md      imports: [git: mwp-rust-idiomatic@v2]   ← deduplicated, dropped
+    └── .mwp-context.md      imports: [git: mwp-rust-idiomatic@v2]   ← deduplicated, dropped
 ```
 
 This is upward inheritance: a module declared at a higher scope applies to all scopes below it. Re-declaring it lower is redundant. The deduplication key is the resolved canonical resource — for `git:` imports, the commit SHA; for `local:` imports, the normalized absolute path.
 
 #### Stack-classification community modules
 
-A large and predictable module category: **stack modules** that encode the conventions of a particular technology. A directory declared as a Next.js frontend in `.mwp-root` has a predictable set of constraints — App Router file layout, React Server Component idioms, Tailwind usage patterns, fetch caching rules — that apply across every project using that stack. Those constraints don't belong in any single project's CONTEXT.md; they belong in a shared, versioned artifact the community maintains.
+A large and predictable module category: **stack modules** that encode the conventions of a particular technology. A directory declared as a Next.js frontend in `.mwp` has a predictable set of constraints — App Router file layout, React Server Component idioms, Tailwind usage patterns, fetch caching rules — that apply across every project using that stack. Those constraints don't belong in any single project's .mwp-context.md; they belong in a shared, versioned artifact the community maintains.
 
 Stack modules are the answer:
 
@@ -488,24 +478,26 @@ Stack modules are the answer:
 | `mwp-stack-rust-axum` | Axum handler patterns, tower middleware, error types, tracing setup |
 | `mwp-stack-*` | community-defined; the taxonomy is open |
 
-The connection to folder topology: when `.mwp-root` declares `"packages/frontend" = { stack = ["nextjs"] }`, the mapper can surface a suggestion that `mwp-stack-nextjs` is a natural import for that directory's CONTEXT.md. The suggestion is advisory — the import is explicit in the CONTEXT.md, never injected automatically. A monorepo with a Next.js frontend and a Django backend imports each stack module at the right directory level; nothing bleeds across the boundary.
+The connection to folder topology: when `.mwp` declares `"packages/frontend" = { stack = ["nextjs"] }`, the mapper can surface a suggestion that `mwp-stack-nextjs` is a natural import for that directory's .mwp-context.md. The suggestion is advisory — the import is explicit in the .mwp-context.md, never injected automatically. A monorepo with a Next.js frontend and a Django backend imports each stack module at the right directory level; nothing bleeds across the boundary.
 
 This is where the module ecosystem becomes qualitatively different from a collection of shared snippets. A practitioner who has worked deeply with Django REST framework encodes their knowledge once, publishes `mwp-stack-django`, and every project that imports it gets that perspective without the project author needing to rediscover the same patterns. The stack becomes the distribution unit for domain expertise.
 
 #### What a well-formed community module contains
 
-A module is a directory. Its root may carry a `CONTEXT.md` with a module-level `layer` and `scope`. Typical layout:
+A module is a directory with `.mwp-context.md` at its root — the same relationship as an npm package and its `package.json`. The `.mwp-context.md` is the entry point: it declares identity, layer, scope, and imports any supporting files within the module via `local:`. The mapper resolves the module by reading that file; nothing else in the directory is loaded automatically.
 
 ```text
 mwp-rust-idiomatic/
-├── CONTEXT.md          # module identity: "Idiomatic Rust 2024 — error handling, ownership, testing"
-├── RULES.md            # always/never rules: no unwrap in library code, Result everywhere
-├── PERSPECTIVE.md      # taste and voice: why these choices, what to avoid, common traps
-└── SKILLS/
-    ├── ownership.md    # ownership patterns, borrowing heuristics
-    ├── error-types.md  # thiserror vs anyhow vs custom, when each applies
-    └── async.md        # tokio patterns, avoid blocking in async context
+├── .mwp-context.md     # entry point — identity, layer/scope, local: imports listed here
+├── rules.md            # imported by .mwp-context.md
+├── perspective.md      # imported by .mwp-context.md
+└── skills/
+    ├── ownership.md    # imported by .mwp-context.md
+    ├── error-types.md  # imported by .mwp-context.md
+    └── async.md        # imported by .mwp-context.md
 ```
+
+File names within a module are not constrained. Only files explicitly listed under `imports:` in `.mwp-context.md` are included — nothing is picked up by convention or directory scan.
 
 A module is allowed to include pre-computed analysis — the distilled output of someone who has examined real codebases and ecosystem codepoints and frozen the findings as context. This is not speculation; it is expert knowledge encoded once and shared as a versioned artifact. When the collector includes the module, the LLM receives the expert's perspective directly.
 
@@ -513,26 +505,38 @@ Module authors are responsible for version discipline: breaking changes incremen
 
 ### 5.4 Cache layout
 
-The `.mwp/` directory is the mapper's local storage. It is not part of the project's source — only `.mwp-root` and the `CONTEXT.md` files belong in version control.
+The `.mwp/` directory is the mapper's local storage. It mixes committed project data with generated and downloaded artefacts, so it carries its own `.mwp/.gitignore` to separate them.
+
+**Commit to version control:**
+
+- All `.mwp-context.md` files throughout the project tree — they encode the team's accumulated understanding and are as valuable as the code itself.
+- `.mwp/topology.md` and `.mwp/discoveries.md` — project-specific maps built and refined over time.
+- `.mwp/.gitignore` itself.
+
+**Do not commit** (covered by `.mwp/.gitignore`):
+
+```gitignore
+# Downloaded/generated — re-created on demand
+modules/
+cache/
+guards.cache.json
+sessions/
+*.sh
+protocol.md
+```
 
 ```text
 .mwp/
-├── modules/                   # pinned git module clones, keyed by commit SHA
+├── .gitignore                  # tracks what to keep vs. ignore in this directory
+├── topology.md                 # committed: workspace map generated by bootstrap
+├── discoveries.md              # committed: session findings and decisions
+├── modules/                   # gitignored: pinned git module clones, keyed by commit SHA
 │   └── <sha>/
-├── guards.cache.json           # guard execution results with TTLs (see §7)
-├── cache/                     # workspace map cache, keyed by content hash
+├── guards.cache.json           # gitignored: guard execution results with TTLs (see §7)
+├── cache/                     # gitignored: workspace map cache, keyed by content hash
 │   └── <entry-hash>.json      # serialized IR for one target + input combination
-└── sessions/                  # named sessions for incremental delivery (see §8.1)
+└── sessions/                  # gitignored: named sessions for incremental delivery (see §8.1)
     └── <session-id>.json      # SeenSet + call log for one session
-```
-
-Add to `.gitignore`:
-
-```gitignore
-.mwp/modules/
-.mwp/cache/
-.mwp/guards.cache.json
-.mwp/sessions/
 ```
 
 #### Two caching strategies, two invalidation models
@@ -558,9 +562,9 @@ Each entry is a JSON file containing the full IR plus metadata:
   "target": "dev/browser-sdk/src/client.ts",
   "inputs_hash": "sha256:abc123...",
   "contributing_files": [
-    "CONTEXT.md",
-    "dev/CONTEXT.md",
-    "dev/browser-sdk/CONTEXT.md"
+    ".mwp-context.md",
+    "dev/.mwp-context.md",
+    "dev/browser-sdk/.mwp-context.md"
   ],
   "created_at": "2026-05-17T11:30:00Z",
   "ir": { /* full IR */ }
@@ -576,8 +580,8 @@ The `contributing_files` list lets the mapper check staleness efficiently: re-ha
 ```text
 fn map(target, fresh=false):
     (sub_root, ws_root) = find_anchor(target)
-    # sub_root: nearest .mwp-root walking up from target
-    # ws_root:  nearest ancestor .mwp-root with members = [...], or sub_root if none
+    # sub_root: nearest .mwp walking up from target
+    # ws_root:  nearest ancestor .mwp with members = [...], or sub_root if none
     # workspace: imports resolve against ws_root; cascade starts from ws_root
     files = traverse_cascade(ws_root, target)    # cheap: stat calls + path arithmetic
 
@@ -629,7 +633,7 @@ Why this matters: LLM clients call `collect` constantly. Running `cargo test` on
 Three trust levels for guards:
 
 - **`builtin`** — a small set the tool ships with (`cargo test`, `npm run <script>`, `pnpm <script>`, `pytest`, `cargo clippy`). Always allowed.
-- **`project`** — listed in `.mwp-root`'s `trust.allowed_guards`. Allowed without prompt.
+- **`project`** — listed in `.mwp`'s `trust.allowed_guards`. Allowed without prompt.
 - **`ad-hoc`** — anything else. The CLI prompts on first run, persists the decision in `.mwp/trust.lock`. The MCP server refuses ad-hoc guards entirely; only `builtin` and `project` run there.
 
 The MCP server never grows a "trust this" tool. The author is responsible for promoting a guard from ad-hoc to project trust before the LLM can use it.
@@ -679,7 +683,7 @@ Each layer entry:
 
 ```jsonc
 {
-  "source": "dev/CONTEXT.md",
+  "source": "dev/.mwp-context.md",
   "layer": 1,
   "priority": 70,
   "tokens": 412,
@@ -766,7 +770,7 @@ connection closes
 
 The LLM is completely uninvolved in the deduplication concern. It calls `map_workspace(target)` exactly as it would without the delta mechanism; the server handles the rest.
 
-The deduplication key is `normalized_absolute_path:content_hash`. Path is the stable identity (case-sensitive, as the filesystem returns it). Hash is the content fingerprint. If a `CONTEXT.md` changes mid-session, its hash changes and the updated content is delivered on the next call even if the old version is already in the LLM's context — the mechanism self-corrects without any LLM awareness.
+The deduplication key is `normalized_absolute_path:content_hash`. Path is the stable identity (case-sensitive, as the filesystem returns it). Hash is the content fingerprint. If a `.mwp-context.md` changes mid-session, its hash changes and the updated content is delivered on the next call even if the old version is already in the LLM's context — the mechanism self-corrects without any LLM awareness.
 
 **Sessions are first-class, not an MCP implementation detail.** A session is any string ID paired with a stored SeenSet. The MCP server auto-generates a UUID per connection; the CLI accepts `--session <id>` explicitly. Any caller — MCP connection, CLI invocation, test harness — can participate in a session. Sessions are stored on disk in `.mwp/sessions/<id>.json` (see §5.4) and are inspectable, listable, and deletable via `mwp sessions` subcommands.
 
@@ -806,7 +810,7 @@ The session ID is the test fixture. Tests are deterministic, reproducible, and s
 ## 9. CLI surface (v1)
 
 ```bash
-mwp init                              # scaffold .mwp-root + example CONTEXT.md at current dir
+mwp init                              # scaffold .mwp + example .mwp-context.md at current dir
 mwp map [target]                      # produce workspace map → JSON IR  (default --format=json)
 mwp map [target] --render markdown    # rendered for direct paste into an LLM session
 mwp map [target] --render claude      # model-specific framing
@@ -838,8 +842,8 @@ The phases are sized so each one ends with something the author can use that day
 
 Deliverables:
 
-- `.mwp-root` discovery (with `.git` fallback).
-- Root-to-leaf cascade traversal of `CONTEXT.md` only.
+- `.mwp` discovery (with `.git` fallback).
+- Root-to-leaf cascade traversal of `.mwp-context.md` only.
 - YAML frontmatter parsing (`layer`, `scope`, `max_tokens`, `priority`).
 - A naive token counter (whitespace-split is fine for v1; swap later).
 - `mwp map <target>` → JSON IR.
@@ -865,7 +869,7 @@ By the end of Phase 2 the author can publish `mwp-rust-idiomatic` as a Git repo,
 
 - Frontmatter `guards: [...]` parsing.
 - Three execution modes (static / `--verify` / `verify-only`).
-- Trust model with `builtin` allowlist + `.mwp-root` `trust.allowed_guards` + interactive ad-hoc prompting.
+- Trust model with `builtin` allowlist + `.mwp` `trust.allowed_guards` + interactive ad-hoc prompting.
 - `.mwp/guards.cache.json` with TTLs and fingerprints.
 - Renderer surfaces guard status in the output.
 - `mwp verify <target>` produces a stage-suitable pass/fail report.
@@ -903,7 +907,7 @@ Items below are individually small and prioritized by whatever the author actual
 - `mwp doctor` — health check on a project's MWP setup.
 - VS Code extension that calls the MCP server.
 - A `mwp publish` helper that tags and pushes a Git module so others can `import` it by SHA.
-- **`mwp-base`** — the first community module, published as a Git repo. Contains a root `CONTEXT.md` that explains the MWP cascade convention itself: what each layer means, how to read the generated preamble, what a well-formed `CONTEXT.md` looks like. The file demonstrates the convention by being an instance of it — an LLM (or a new human contributor) that reads it understands the pattern without reading the spec. This is the onboarding artifact Van Clief's paper describes as the "generic root CONTEXT.md that explains the convention itself." As a published module, it becomes the natural base that other community modules extend.
+- **`mwp-base`** — the first community module, published as a Git repo. Contains a root `.mwp-context.md` that explains the MWP cascade convention itself: what each layer means, how to read the generated preamble, what a well-formed `.mwp-context.md` looks like. The file demonstrates the convention by being an instance of it — an LLM (or a new human contributor) that reads it understands the pattern without reading the spec. This is the onboarding artifact Van Clief's paper describes as the "generic root .mwp-context.md that explains the convention itself." As a published module, it becomes the natural base that other community modules extend.
 
 Explicitly deferred: vector search, autonomous agents, LLM-driven summarization, registry hosting.
 
@@ -961,8 +965,8 @@ These are real, not rhetorical. Each one is something to revisit when implementa
 3. **Guard output in IR.** Should guard `stdout` ever be embedded in the rendered context? Probably not by default — it could leak large blobs — but a `guards: [{ include_output_on_fail: true }]` flag may be worth it.
 4. **Stage progression.** Pipelines (`<NN>_<stage>/`) are recognised by the convention but the v1 mapper does not yet *enforce* stage ordering. Whether `mwp` should grow a `next-stage` command or stay agnostic is a question for after Phase 3.
 5. **Sharing model.** Pinned Git URLs work. They are not friendly to non-technical users. Whether and when to add a thin "named module" indirection (a `.mwp/registry.toml` that maps names to URLs) is open.
-6. **Conflict between `imports` and the natural cascade.** If `dev/CONTEXT.md` imports a module that also defines a `RULES.md`, where does the imported file sit in the layer order? Current proposal: imports inherit the importing entry's layer and sort lower in priority. This needs real examples to validate.
-8. **Nested workspace resolution edge cases.** The two-level anchor walk (sub-project root → workspace root) is clear for the common case. Three cases need resolution when implementation starts: (a) a sub-project's `workspace:` import references a member path that doesn't have its own `.mwp-root` — is that an error or does the mapper treat the directory as an implicit member? (b) a workspace root declares `members` but a `members` entry also declares `members` — does the mapper recurse, or is nesting capped at two levels? (c) `workspace:` imports when the sub-project is run standalone (no parent workspace) are currently reported as warnings and skipped — should the mapper try to fall back to a `git:` URL declared alongside the `workspace:` path as a resolution hint? This would let a CONTEXT.md express "use the local version if in the workspace, otherwise fetch from git."
+6. **Conflict between `imports` and the natural cascade.** If `dev/.mwp-context.md` imports a module that also defines a `RULES.md`, where does the imported file sit in the layer order? Current proposal: imports inherit the importing entry's layer and sort lower in priority. This needs real examples to validate.
+8. **Nested workspace resolution edge cases.** The two-level anchor walk (sub-project root → workspace root) is clear for the common case. Three cases need resolution when implementation starts: (a) a sub-project's `workspace:` import references a member path that doesn't have its own `.mwp` — is that an error or does the mapper treat the directory as an implicit member? (b) a workspace root declares `members` but a `members` entry also declares `members` — does the mapper recurse, or is nesting capped at two levels? (c) `workspace:` imports when the sub-project is run standalone (no parent workspace) are currently reported as warnings and skipped — should the mapper try to fall back to a `git:` URL declared alongside the `workspace:` path as a resolution hint? This would let a .mwp-context.md express "use the local version if in the workspace, otherwise fetch from git."
 
 9. **Semantic activation beyond path topology.** The current cascade is purely path-based: file location determines what context loads. A richer model would let modules declare activation signals — `activates_on: ["**/auth/**", "keyword:migration"]` — so the map responds to what the developer is actually doing, not just where the target file lives. This is the same mechanism Engram uses for node activation, applied one layer up: activating orientation context rather than solution paths. The activation rules would still be declared (not inferred), preserving determinism. Worth exploring in Phase 5 or later as a separate design. If implemented, the mapper starts to look less like a static cascade and more like a lightweight activation graph — a navigational graph that produces orientation rather than decisions.
 
