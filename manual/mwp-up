@@ -1,0 +1,159 @@
+#!/bin/sh
+# MWP — Model Workspace Protocol installer
+# curl --proto '=https' --tlsv1.2 -sSf \
+#   https://raw.githubusercontent.com/dominikj111/model-workspace-protocol-tool/main/manual/mwp-up | sh
+
+set -e
+
+BASE_URL="https://raw.githubusercontent.com/dominikj111/model-workspace-protocol-tool/main/manual"
+
+# ── Colors ────────────────────────────────────────────────────────────────────
+RED=$(printf '\033[31m')
+GREEN=$(printf '\033[32m')
+YELLOW=$(printf '\033[33m')
+BLUE=$(printf '\033[34m')
+CYAN=$(printf '\033[36m')
+BOLD=$(printf '\033[1m')
+DIM=$(printf '\033[2m')
+NC=$(printf '\033[0m')
+
+ok()     { printf "  ${GREEN}✓${NC}  %s\n" "$1"; }
+info()   { printf "  ${BLUE}→${NC}  %s\n" "$1"; }
+warn()   { printf "  ${YELLOW}⚠${NC}   %s\n" "$1"; }
+err()    { printf "  ${RED}✗${NC}  %s\n" "$1" >&2; }
+header() { printf "\n${BOLD}%s${NC}\n" "$1"; }
+dim()    { printf "${DIM}%s${NC}\n" "$1"; }
+
+download() {
+  url="$1"
+  dest="$2"
+  if ! curl --proto '=https' --tlsv1.2 -sSf "$url" -o "$dest"; then
+    err "Failed to download $url"
+    exit 1
+  fi
+}
+
+fetch_script() {
+  url="$1"
+  dest="$2"
+  if [ -f "$dest" ]; then
+    info "Kept existing  $(basename "$dest")"
+    return
+  fi
+  download "$url" "$dest"
+  chmod +x "$dest"
+  ok "Downloaded    $(basename "$dest")"
+}
+
+fetch_file() {
+  url="$1"
+  dest="$2"
+  if [ -f "$dest" ]; then
+    info "Kept existing  $(basename "$dest")"
+    return
+  fi
+  download "$url" "$dest"
+  ok "Downloaded    $(basename "$dest")"
+}
+
+# ── Header ────────────────────────────────────────────────────────────────────
+printf "\n"
+printf "%s%s  MWP%s%s — Model Workspace Protocol%s\n" "$BOLD" "$CYAN" "$NC" "$BOLD" "$NC"
+dim    "  Workspace context tooling for LLM-assisted development"
+printf "\n"
+
+# ── Project root check ────────────────────────────────────────────────────────
+if [ ! -d ".git" ] && \
+   [ ! -f "package.json" ] && [ ! -f "Cargo.toml" ] && \
+   [ ! -f "pyproject.toml" ] && [ ! -f "go.mod" ]; then
+  warn "No project root detected (.git, package.json, Cargo.toml, go.mod, pyproject.toml)"
+  warn "Run this from your project root."
+  printf "\n  Continue anyway? [y/N] "
+  IFS= read -r answer < /dev/tty
+  case "$answer" in
+    [Yy]*) ;;
+    *) err "Aborted."; exit 1 ;;
+  esac
+fi
+
+# ── Create .mwp/ ─────────────────────────────────────────────────────────
+header "Setting up .mwp/"
+
+if [ -d ".mwp" ]; then
+  info ".mwp/ exists — existing files kept, missing ones downloaded"
+else
+  mkdir -p .mwp
+  ok "Created .mwp/"
+fi
+
+# ── Write .mwp/.gitignore ─────────────────────────────────────────────────────
+if [ ! -f ".mwp/.gitignore" ]; then
+  cat > .mwp/.gitignore << 'EOF'
+# MWP scripts are re-downloaded via mwp-up after a fresh clone.
+# Only topology.md and discoveries.md should be committed.
+bootstrap.sh
+explore.sh
+concat-context.sh
+changes.sh
+search.sh
+context-scaffold.sh
+uninstall.sh
+protocol.md
+EOF
+  ok "Created       .mwp/.gitignore"
+else
+  info "Kept existing  .mwp/.gitignore"
+fi
+
+# ── Scripts ───────────────────────────────────────────────────────────────────
+fetch_script "$BASE_URL/bootstrap.sh"       ".mwp/bootstrap.sh"
+fetch_script "$BASE_URL/explore.sh"         ".mwp/explore.sh"
+fetch_script "$BASE_URL/concat-context.sh"  ".mwp/concat-context.sh"
+fetch_script "$BASE_URL/search.sh"          ".mwp/search.sh"
+fetch_script "$BASE_URL/changes.sh"         ".mwp/changes.sh"
+fetch_script "$BASE_URL/context-scaffold.sh" ".mwp/context-scaffold.sh"
+fetch_script "$BASE_URL/uninstall.sh"       ".mwp/uninstall.sh"
+
+# ── Protocol ──────────────────────────────────────────────────────────────────
+fetch_file "$BASE_URL/protocol.md" ".mwp/protocol.md"
+
+# ── Bootstrap prompt ──────────────────────────────────────────────────────────
+header "Bootstrap"
+info "Scans the project and generates ${BOLD}.mwp/topology.md${NC}"
+printf "\n  Run bootstrap now? [Y/n] "
+IFS= read -r answer < /dev/tty
+printf "\n"
+
+case "$answer" in
+  [Nn]*)
+    info "To bootstrap later:  ${BOLD}bash .mwp/bootstrap.sh${NC}"
+    ;;
+  *)
+    bash .mwp/bootstrap.sh
+    ok "topology.md generated"
+    ;;
+esac
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+printf "\n"
+printf "%s%s  Setup complete.%s\n" "$BOLD" "$GREEN" "$NC"
+printf "\n"
+printf "  ${BOLD}Next step${NC} — add the following block to your %sCLAUDE.md%s\n" "$CYAN" "$NC"
+printf "  (or equivalent LLM session init file):\n"
+printf "\n"
+printf "%s" "$DIM"
+printf "  ┌─────────────────────────────────────────────────────────────┐\n"
+printf "%s" "$NC"
+printf "  %s│%s @.mwp/protocol.md\n" "$DIM" "$NC"
+printf "  %s│%s\n" "$DIM" "$NC"
+printf "  %s│%s At every session start:\n" "$DIM" "$NC"
+printf "  %s│%s   1. Run \`bash .mwp/changes.sh\`\n" "$DIM" "$NC"
+printf "  %s│%s   2. Read \`.mwp/topology.md\`\n" "$DIM" "$NC"
+printf "  %s│%s   3. Read \`.mwp/discoveries.md\` (if it exists)\n" "$DIM" "$NC"
+printf "  %s│%s\n" "$DIM" "$NC"
+printf "  %s│%s When a target is known:\n" "$DIM" "$NC"
+printf "  %s│%s   - Run \`bash .mwp/concat-context.sh <target>\` ONCE\n" "$DIM" "$NC"
+printf "  %s│%s   - Update \`.mwp/discoveries.md\` with new findings\n" "$DIM" "$NC"
+printf "%s" "$DIM"
+printf "  └─────────────────────────────────────────────────────────────┘\n"
+printf "%s\n" "$NC"
