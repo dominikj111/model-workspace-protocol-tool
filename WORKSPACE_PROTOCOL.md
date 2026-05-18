@@ -1,35 +1,41 @@
 # Workspace Mapping Protocol
 
-**Structure:** Bootstrap (one-time init script) → During the session (cascade read → map update → proceed) → Five context layers.
+**Structure:** Bootstrap (generates `topology.md`) → During the session (read both files → cascade CONTEXT.md → write to `discoveries.md` → proceed) → Persistence rules → Five context layers.
+
+Both files live in `.mwp-root/`. `topology.md` is regenerable. `discoveries.md` is permanent, human-curated accumulation.
 
 ---
 
-## Bootstrap (once, if the map does not exist or is empty)
+## Bootstrap (once, or when topology changes)
 
-Copy-paste and run the entire block from the project root. It writes directly to the map.
+Copy-paste and run the entire block from the project root. Writes directly to `topology.md`.
 
 ```bash
 mkdir -p .mwp-root && {
 
-# Directory tree
-{
-  echo "# Workspace Map"
-  echo ""
-  echo "## Directory Tree"
-  echo '```'
-  find . -maxdepth 5 \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*'       -not -path '*/__pycache__/*' \
-    -not -path '*/.mwp/*'         -not -path '*/dist/*' \
-    -not -path '*/build/*'        -not -path '*/.next/*' \
-    -not -path '*/.turbo/*'       -not -path '*/coverage/*' \
-    | sort
-  echo '```'
-  echo ""
-} > .mwp-root/WORKSPACE_MAP.md
+# Create .mwpignore with commented defaults if absent
+[ -f .mwpignore ] || cat > .mwpignore << 'EOF'
+# Project-specific exclusions for workspace map (one pattern per line, grep -vE semantics)
+# node_modules/, .git/, target/ are always excluded regardless of this file
+# generated/
+# vendor/
+# fixtures/
+# *.snap
+EOF
+
+# Filter: applies .mwpignore patterns on top of the hardcoded base exclusions
+mwp_filter() {
+  local pattern
+  pattern=$(grep -v '^[[:space:]]*#' .mwpignore 2>/dev/null \
+            | grep -v '^[[:space:]]*$' \
+            | tr '\n' '|' | sed 's/|$//')
+  [ -n "$pattern" ] && grep -vE "$pattern" || cat
+}
 
 # Sub-project root markers
 {
+  echo "# Workspace Topology"
+  echo ""
   echo "## Sub-project Markers"
   find . -maxdepth 4 \
     \( -name "package.json" -o -name "Cargo.toml" -o -name "pyproject.toml" \
@@ -37,9 +43,9 @@ mkdir -p .mwp-root && {
        -o -name ".mwp-root" \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
     -not -path '*/target/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} > .mwp-root/topology.md
 
 # CONTEXT.md files
 {
@@ -47,9 +53,9 @@ mkdir -p .mwp-root && {
   find . -name "CONTEXT.md" \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
     -not -path '*/target/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
 # Entry points
 {
@@ -60,9 +66,9 @@ mkdir -p .mwp-root && {
        -o -name "app.ts"  -o -name "server.ts" \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
     -not -path '*/target/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
 # Infrastructure and config files
 {
@@ -73,13 +79,13 @@ mkdir -p .mwp-root && {
        -o -name "vite.config.*" -o -name "next.config.*" \
        -o -name "*.config.ts"   -o -name "*.config.js" \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   find . -maxdepth 3 \
     \( -path '*/.github/workflows/*.yml' -o -name ".travis.yml" \
        -o -name "Jenkinsfile" \) \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
 # Monorepo workspace files
 {
@@ -89,9 +95,9 @@ mkdir -p .mwp-root && {
        -o -name "nx.json"          -o -name "turbo.json" \
        -o -name "rush.json" \) \
     -not -path '*/.git/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
 # API and schema definitions
 {
@@ -102,38 +108,33 @@ mkdir -p .mwp-root && {
        -o -name "*.prisma"     -o -name "schema.sql" \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
     -not -path '*/target/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
 # README files at sub-project roots
 {
   echo "## README Files"
   find . -maxdepth 3 -name "README.md" \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    | sort | while read f; do echo "- $f"; done
+    | sort | mwp_filter | while read f; do echo "- $f"; done
   echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
+} >> .mwp-root/topology.md
 
-# Placeholder sections for LLM to fill in
-{
-  echo "## Sub-project Topology"
-  echo "<!-- Add one entry per sub-project: nature, stack, key constraints, boundaries -->"
-  echo ""
-  echo "## Conventions and Rules"
-  echo "<!-- Discovered rules and constraints, grouped by path scope -->"
-  echo ""
-} >> .mwp-root/WORKSPACE_MAP.md
-
-echo "Done → .mwp-root/WORKSPACE_MAP.md"
+echo "Done → .mwp-root/topology.md"
 }
 ```
 
-Do not re-run unless the map is empty or you want to regenerate it from scratch.
+**Regenerate topology when:** new sub-projects appear, manifests are added or removed, major directories are restructured.
 
 ---
 
 ## During the session
+
+At session start, read both files:
+
+- `.mwp-root/topology.md` — structural index of the project
+- `.mwp-root/discoveries.md` — accumulated findings from previous sessions (may not exist yet)
 
 When the target is known, follow this sequence before doing any work:
 
@@ -145,45 +146,46 @@ When the target is known, follow this sequence before doing any work:
    find . -name "CONTEXT.md" \
      -not -path '*/node_modules/*' -not -path '*/.git/*' \
      -not -path '*/target/*'       -not -path '*/__pycache__/*' \
-     -not -path '*/.mwp/*' \
+     -not -path '*/.mwp-root/*' \
      | sort
    ```
 
-2. **Inject any missing information into `.mwp-root/WORKSPACE_MAP.md`.** Everything
-   learned from the cascade that is not yet in the map goes in now — as list items,
-   anchored by relative path. The map is read once at session start and stays in context;
-   subsequent writes persist discoveries for future sessions, not the current one.
+2. **Inject missing findings into `.mwp-root/discoveries.md`** — facts not yet recorded
+   that were learned from the cascade or from reading source. Written now for future
+   sessions; the current session already has them in context.
 
-3. **Proceed** — the session context is now enriched from both the map and the cascade.
+3. **Proceed** — context is now enriched from topology, discoveries, and the cascade.
 
-**Format rules for map additions:**
+---
 
-- All items are **list items** — found facts, not prose.
-- Every item uses the **relative path** as its anchor (e.g. `./backend/src/api`).
-- Project-wide facts go flat under the relevant top-level section.
-- Each sub-project gets its own `### ./name` subsection; discoveries within it are flat
-  list items — no deeper nesting.
+## Persistence rules
+
+Write to `discoveries.md`:
+
+- `stack:` — observed language, framework, runtime
+- `boundary:` — what this sub-project owns and does not own
+- `convention:` — coding or architectural rules in force
+- `dependency:` — explicit cross-sub-project relationships
+- `constraint:` — hard limits (size, performance, security, compliance)
+- `owner:` — team or person responsible
+
+Suffix `?` on any item inferred rather than directly observed:
 
 ```markdown
-## Sub-project Topology
-
-### ./frontend
-- stack: ViteJS, React, TypeScript
-- owns: browser-facing UI, routing, state management
-- bundle constraint: < 200 KB compressed
-- consumes: `./packages/shared-types` for API contracts
-- ./frontend/src/components — UI primitives, no data fetching
-- ./frontend/src/pages — route-level components, may fetch
-
-### ./backend
-- stack: Node.js, TypeScript, tRPC
-- owns: HTTP API, business logic, DB access
-- ./backend/src/api — tRPC router definitions
-- ./backend/src/db — Prisma schema and migrations
+- stack: Node.js, TypeScript
+- stack?: tRPC  (inferred from ./backend/package.json dependency)
+- boundary: owns HTTP API layer, no direct browser access
+- constraint?: bundle < 200 KB  (inferred from ./frontend/README.md)
 ```
 
-**Do not** log tasks, diffs, or session summaries. The map is terrain, not work history.
-Source code and git history cover the work.
+Do **not** write:
+
+- speculative summaries or optimization ideas
+- session reasoning or implementation plans
+- inferred intentions without a source anchor
+- anything not traceable to a file you read
+
+The map is terrain, not work history. Source code and git history cover the work.
 
 ---
 
@@ -195,6 +197,8 @@ Source code and git history cover the work.
 | L1 | Domain routing — which directory handles what, technology choices |
 | L2 | Module scope — public interface, responsibility, and constraints of a directory |
 | L3 | Reference — conventions, rules, patterns, skills |
+| L4 | Executable constraints — guards and verification checks that confirm L3 rules hold |
 
-L0–L1 applies everywhere. L2–L3 applies within its directory scope and all children.
+L0–L1 applies everywhere. L2–L4 applies within its directory scope and all children.
 More specific (closer to target) overrides less specific when they conflict.
+`CONTEXT.md` at a directory boundary (where `.mwp-root` exists) stops upward traversal.
