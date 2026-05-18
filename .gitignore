@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# MWP tool state (for when this repo bootstraps itself)
+.mwp/modules/
+.mwp/cache/
+.mwp/guards.cache.json
+.mwp/sessions/
