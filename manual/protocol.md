@@ -1,6 +1,6 @@
 # Workspace Mapping Protocol
 
-**Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md` → proceed) → Creating .mwp-context.md files → Persistence rules → Five context layers.
+**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md` → proceed) → Creating .mwp-context.md files → Persistence rules → Five context layers.
 
 Both files live in `.mwp/`. `topology.md` is regenerable. `discoveries.md` is permanent, human-curated accumulation.
 

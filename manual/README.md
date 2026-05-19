@@ -28,6 +28,7 @@ This creates `.mwp/` in your project with:
 | `changes.sh`            | Session-start orientation: recent commits, uncommitted state, topology status   |
 | `search.sh`             | `.mwpignore`-aware code search — `bash .mwp/search.sh <pattern> [path]`         |
 | `context-scaffold.sh`   | Creates a `.mwp-context.md` stub in a directory for the AI to fill in           |
+| `uninstall.sh`          | Remove manual mwp-tool from the repository                                      |
 | `protocol.md`           | Instructions for the AI assistant — load this in CLAUDE.md                      |
 | `topology.md`           | Generated structural index (sub-projects, entry points, schemas, config)        |
 | `discoveries.md`        | Cumulative findings written by the AI across sessions (starts empty)            |
@@ -137,8 +138,7 @@ bash .mwp/uninstall.sh
 ```
 
 Removes `.mwp/`, all `.mwp-context.md` files in the project tree, and `.mwpignore` — with
-a confirmation prompt and a count of what will be deleted. Then drop the `@.mwp/protocol.md`
-line (and the session-start block) from your `CLAUDE.md`.
+a confirmation prompt and a count of what will be deleted. Then drop the **mwp** lines (and the session-start block) from your `CLAUDE.md`.
 
 ---
 
