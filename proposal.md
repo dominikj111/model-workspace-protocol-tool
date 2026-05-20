@@ -12,6 +12,24 @@ A comprehensive proposal for a deterministic workspace mapper, with a later MCP 
 
 ## 0. TL;DR
 
+### The two workflows Van Clief describes
+
+> **Read this first.** The paper describes two distinct workflows. This tool targets the first and accommodates the second. Confusing them leads to misunderstanding what the tool is for.
+
+**Workflow A — Context structure (what this tool automates)**
+
+Place a `CONTEXT.md` file in any directory that has conventions, constraints, or intent worth stating. The folder tree becomes a cascading context loader: working deep in a sub-project means every ancestor's context has already loaded, narrowing the LLM's focus layer by layer. No special tooling required — just markdown files in directories.
+
+**Workflow B — Intent-driven pipeline (user discipline, not tool-enforced)**
+
+Every task starts as a file (`intent.md` or a numbered stage file). The LLM processes it and writes an output file. The human reads, edits, and approves the output. The approved file becomes the sole input for the next stage. Nothing proceeds without the human explicitly promoting the file. The entire pipeline lives in the filesystem — resumable, auditable, and completely independent of chat session memory. No special tooling required here either.
+
+**What this tool does**
+
+This tool targets Workflow A. It automates the assembly of the context cascade, adds verified references, resolves community module imports, and produces a bounded, explainable workspace map. Workflow B is user discipline — the tool does not enforce it. But it accommodates it: intent files and promoted pipelines live in suggested, committed, scannable directories the mapper recognises and can include in the map.
+
+---
+
 Van Clief's Model Workspace Protocol is originally about structural project documentation — small, focused markdown files organized alongside the code, each describing one thing at one scope level: project identity, domain rules, stage contracts, reference material. That documentation layer is the raw material this tool works with.
 
 This tool is a **workspace mapper**. Given a target (a file path or stage folder), it walks the project tree, reads the structural documentation layer — `.mwp-context.md`-class files along the cascade — parses their frontmatter, resolves imports from community modules, optionally runs verification scripts, and produces a **workspace map**: a structured, layered, bounded artifact that tells the LLM how to navigate and approach work in this part of the project.
@@ -79,7 +97,7 @@ imports:
   - git: https://github.com/mwp-community/trpc-fullstack.git@v1.0.0
 ```
 
-Each of those modules is a curated set of context files — `.mwp-context.md` files and any supporting markdown they reference — assembled by people who have spent serious time with that stack and have encoded what "thinking like a senior Rust developer" or "approaching this as a Cloud-Native AWS architect" actually means in practice. They may be published as Git repos, npm packages, or Cargo crates — the import mechanism is the same; the mapping step resolves them via their installed path.
+Each of those modules is a git repository containing a `.mwp-module.md` manifest that links to its content files — assembled by people who have spent serious time with that stack and have encoded what "thinking like a senior Rust developer" or "approaching this as a Cloud-Native AWS architect" actually means in practice. They may be published as Git repos, npm packages, or Cargo crates — the import mechanism is the same; the mapping step resolves them via their installed path.
 
 The LLM that loads these modules is not a general-purpose assistant that happens to know Rust. For this session, it is a developer who thinks the way your team thinks — with idiomatic patterns, the anti-patterns flagged, the deployment model baked in, the constraint set established. No fine-tuning, no specialist agent, no context hand-off.
 
@@ -113,6 +131,8 @@ To keep scope honest, the following are explicitly out:
 - **A new prompt-engineering DSL.** Frontmatter + Markdown. Nothing else.
 - **A package registry of our own.** Sharing is via plain Git URLs, and modules may optionally also be published to npm, crates.io, or other registries — but the mapper never depends on a package manager to resolve imports. It resolves paths, nothing more.
 - **Tight coupling to any single language ecosystem.** npm modules, Cargo crates, and Go modules are all welcome as *containers* for community context packages. The mapper treats them all as `local:` path imports after the package manager has installed them. It never drives the installation step itself.
+- **Workflow enforcement.** The tool does not enforce how users interact with the produced map. Van Clief's staged pipeline pattern — `intent.md` → LLM processes → `output.md` → human review → next stage — is a valuable complement and is recommended, but it is user-managed. A project that adopts this discipline documents it in `.mwp-context.md`; the LLM, once oriented by the map, will naturally offer and guide the pattern. The tool has no mechanism to enforce it and deliberately avoids acquiring one.
+- **LLM or IDE coupling.** The workspace map is plain text. It works with any LLM, in any IDE, on any OS. The MCP server (Phase 4) is a convenience for clients that support the protocol — not a requirement. A user who prefers to paste the map manually, pipe it to an API call, or use it with a local model has a complete workflow.
 
 If any of these turn out to be valuable later, they are separate proposals.
 
@@ -129,6 +149,7 @@ If any of these turn out to be valuable later, they are separate proposals.
 7. **Static by default, dynamic on request.** File reads are free; script execution requires explicit opt-in and is cached.
 8. **CLI first, MCP second.** A useful CLI we can run in CI, IDEs, and shells must exist before we wrap it in any LLM protocol.
 9. **.mwp-context.md is the extension interface.** New mapper capabilities are expressed as new .mwp-context.md frontmatter fields or new `.mwp` declarations. General capabilities belong in the core. Domain-specific capabilities belong in community modules. This division keeps the core small and lets the community grow the capability surface without forking the tool.
+10. **Approach agnostic.** The tool produces a workspace map — a structured text artifact. What the user does with that map is their choice: paste it manually, load it via MCP, use it in any IDE, with any LLM. No MCP dependency, no Claude dependency, no IDE lock-in.
 
 ---
 
@@ -185,11 +206,11 @@ Project structure:
 ```text
 project/
 ├── .mwp
-├── .mwp-context.md              ← L0: "browser SDK for EU logistics platform"
+├── CLAUDE.md                    ← project-level LLM instructions (not read by mwp)
 ├── dev/
-│   ├── .mwp-context.md          ← L1: "Rust+TypeScript; tRPC bridge; no runtime reflection"
+│   ├── .mwp-context.md          ← L0: "browser SDK for EU logistics platform"
 │   └── browser-sdk/
-│       ├── .mwp-context.md      ← L3: "owns TS→Rust boundary; bundle < 50 KB compressed"
+│       ├── .mwp-context.md      ← L1: "owns TS→Rust boundary; bundle < 50 KB compressed"
 │       │   guards:
 │       │     - cmd: ./bundle-size-check.sh
 │       └── src/
@@ -215,11 +236,7 @@ References marked ⚠️ are flagged — their check is failing or stale; apply 
 Browser SDK for the EU logistics platform. Primary interface for carrier
 and shipper integrations.
 
-## L1 — Domain rules
-Rust + TypeScript stack. tRPC for type-safe API calls across the boundary.
-No runtime reflection. Prefer compile-time codegen.
-
-## L3 — Module: browser-sdk
+## L1 — Module: browser-sdk
 Owns the TypeScript → Rust API boundary.
 Bundle size constraint: < 50 KB compressed.
 Guard: bundle-size-check.sh — passed 8 min ago ✓
@@ -310,9 +327,9 @@ Default is `0` (full cascade) because the safe failure mode is too much context,
 
 ### 5.2 Context files
 
-**`.mwp-context.md` is optional at every directory level.** The mapper never requires it. When traversing the cascade, it checks for a `.mwp-context.md` at each directory; if none is present, that level contributes nothing to the map and the traversal continues. A project with no `.mwp-context.md` files at all still produces a useful map — the LLM receives the directory topology from `.mwp`, the target path itself (which carries implicit information about where the work lives), and the generated preamble. That is a working starting point.
+**`.mwp-context.md` is used in subdirectories, not at the project root.** The root directory is owned by whatever LLM instruction file the toolchain requires — `CLAUDE.md` for Claude Code, `.cursorrules` for Cursor, `AGENTS.md` for others. The mapper reads neither file; they belong to the host tool, not to MWP. The only MWP artifact at the project root is `.mwp`. Below the root, `.mwp-context.md` is optional at every level: when traversing the cascade, the mapper checks for it at each directory; if none is present, that level contributes nothing and traversal continues. A project with no `.mwp-context.md` files below the root still produces a useful map from the `.mwp` topology alone.
 
-This means adoption is incremental: start with just `.mwp`, add `.mwp-context.md` where a directory has conventions worth stating, and grow coverage over time. A missing `.mwp-context.md` is a gap in enrichment, not an error.
+This means adoption is incremental: start with just `.mwp`, add `.mwp-context.md` where a subdirectory has conventions worth stating, and grow coverage over time. A missing `.mwp-context.md` is a gap in enrichment, not an error.
 
 `.mwp-context.md` is the **index file** for its directory's context when present — analogous to `index.js` / `index.ts` in a JavaScript module, `mod.rs` in Rust, or `__init__.py` in Python. When the mapper reaches a directory that has one, `.mwp-context.md` is the entry point: it defines the scope for that level, lists any additional files to include from the same directory or its subdirectories, and optionally imports external modules. Like a module index file, it can reference siblings and children — but not parents.
 
@@ -366,6 +383,17 @@ Three import kinds, each with a distinct resolution rule:
 
 `.mwp-context.md` is the only reserved filename. Any additional files a team wants to include — rules, conventions, reference material — should be referenced from within `.mwp-context.md` using `local:` imports. There is no prescribed layout beyond the index file itself.
 
+#### LLM instruction files as sub-application boundaries
+
+`CLAUDE.md`, `.cursorrules`, `AGENTS.md`, and equivalent files mark a sub-application boundary during cascade traversal. When the mapper descends into a directory and finds one of these files, it stops and does not traverse deeper. The directory is added to the workspace map as a sub-application reference — topology-level only, exactly as `map_workspace()` without a target would present it: name, path, and declared role. Its internal conventions are not loaded into the current map.
+
+This rule has two consequences:
+
+- A sub-project that has `CLAUDE.md` but no `.mwp` is opaque to the parent map — and that is intentional. From the parent project's perspective, only the sub-project's basic role and interface matter. To work inside it, the sub-project must be initialised with `mwp init` first. Calling `map_workspace(target)` with a path inside an uninitialised sub-project exits with a message directing the user to run `mwp init` there — it does not produce a partial map.
+- The mapper never needs to understand the semantics of these files. It treats their presence as a stop signal, nothing more.
+
+`mwp lint` reports a warning when a directory has both a `.mwp-context.md` and a `CLAUDE.md` (or equivalent) — that combination is a conflict; the two are mutually exclusive at the same directory level.
+
 ### 5.3 Modules
 
 Three import kinds, all deterministic:
@@ -403,7 +431,7 @@ A concrete example — Rust engine + TypeScript backend + ViteJS frontend + shar
 ```text
 project/
 ├── .mwp                      # anchor; declares all sub-projects
-├── .mwp-context.md                     # L0: project identity, architecture overview
+├── CLAUDE.md                           # project-level LLM instructions (not read by mwp)
 ├── engine/                        # Rust processing core
 │   └── .mwp-context.md                 # stack: rust; imports mwp-stack-rust-axum
 ├── backend/                       # Node.js/TypeScript API
@@ -441,7 +469,7 @@ imports:
 
 When editing `backend/src/api/routes.ts`, the resolved cascade is:
 
-1. Root `.mwp-context.md` — project identity and full topology (L0)
+1. Root `.mwp` topology — project identity and directory overview (L0)
 2. `backend/.mwp-context.md` — backend conventions, with `packages/` context spliced in
 3. `backend/src/api/.mwp-context.md` — if present (L2 stage contract or local rules)
 
@@ -484,20 +512,56 @@ This is where the module ecosystem becomes qualitatively different from a collec
 
 #### What a well-formed community module contains
 
-A module is a directory with `.mwp-context.md` at its root — the same relationship as an npm package and its `package.json`. The `.mwp-context.md` is the entry point: it declares identity, layer, scope, and imports any supporting files within the module via `local:`. The mapper resolves the module by reading that file; nothing else in the directory is loaded automatically.
+A module is identified by the presence of `.mwp-module.md` in its root directory — the same relationship as a `package.json` to an npm package. When the mapper resolves a `git:` or `local:` import and finds `.mwp-module.md`, it reads that file as the module manifest and ignores any `CLAUDE.md` or equivalent LLM instruction file in the same directory. Nothing else is loaded automatically — only what the manifest explicitly lists. All `.mwp-context.md` files in any subdirectory of the module are also ignored; a module is opaque except through its manifest.
+
+`.mwp-module.md` declares module identity (`name`, `version`, `description`), context files to include via `local:` imports using whatever paths and names the author chose, pipeline templates to surface via a `pipelines:` list, and any module dependencies via `git:` imports. Each module is responsible for pinning its own dependency versions — Deno-style: no shared lockfile, each module owns its deps. File and folder names inside the module are unconstrained.
+
+**Minimal module** — a git repo with just the marker file, contributing nothing yet:
+
+```text
+my-module/
+└── .mwp-module.md    # presence marks this as a module; empty imports = no content contributed
+```
+
+**Typical module:**
 
 ```text
 mwp-rust-idiomatic/
-├── .mwp-context.md     # entry point — identity, layer/scope, local: imports listed here
-├── rules.md            # imported by .mwp-context.md
-├── perspective.md      # imported by .mwp-context.md
-└── skills/
-    ├── ownership.md    # imported by .mwp-context.md
-    ├── error-types.md  # imported by .mwp-context.md
-    └── async.md        # imported by .mwp-context.md
+├── CLAUDE.md                    # human-facing docs — ignored by mwp inside a module dir
+├── .mwp-module.md               # module manifest
+├── rules.md                     # imported via local: in .mwp-module.md
+├── perspective.md               # imported via local: — any name, author's choice
+└── craft/                       # any directory name
+    ├── ownership-notes.md       # imported via local:
+    ├── error-handling.md        # imported via local:
+    └── async-patterns.md        # imported via local:
 ```
 
-File names within a module are not constrained. Only files explicitly listed under `imports:` in `.mwp-context.md` are included — nothing is picked up by convention or directory scan.
+**`.mwp-module.md` format:**
+
+```markdown
+---
+name: mwp-rust-idiomatic
+version: 2.1.0
+description: Idiomatic Rust — error handling, ownership patterns, async discipline
+layer: 3
+imports:
+  - local: ./rules.md
+  - local: ./perspective.md
+  - local: ./craft/ownership-notes.md
+  - local: ./craft/error-handling.md
+  - local: ./craft/async-patterns.md
+pipelines:
+  - local: ./workflows/feature-impl.md
+  - local: ./workflows/refactor-safety.md
+---
+
+Brief body describing what this module provides and who it is for.
+```
+
+> **Future — global module cache.** Module dependencies declared in `.mwp-module.md` will eventually resolve against a global per-machine cache (analogous to Deno's module cache or Cargo's registry cache) rather than being re-fetched per project. This is not in scope for current phases but the import syntax is designed to be forward-compatible with it.
+
+File names within a module are not constrained. Only files explicitly listed in `.mwp-module.md` are included — nothing is picked up by convention or directory scan.
 
 A module is allowed to include pre-computed analysis — the distilled output of someone who has examined real codebases and ecosystem codepoints and frozen the findings as context. This is not speculation; it is expert knowledge encoded once and shared as a versioned artifact. When the collector includes the module, the LLM receives the expert's perspective directly.
 
@@ -512,6 +576,8 @@ The `.mwp/` directory is the mapper's local storage. It mixes committed project 
 - All `.mwp-context.md` files throughout the project tree — they encode the team's accumulated understanding and are as valuable as the code itself.
 - `.mwp/topology.md` and `.mwp/discoveries.md` — project-specific maps built and refined over time.
 - `.mwp/.gitignore` itself.
+- `.mwp/intents/` — **suggested, not required** — active task intent files (Workflow B). One file per current task, written before the LLM begins work. The mapper scans this directory and includes any intent files in the workspace map when present. See §5.5.
+- `.mwp/pipelines/` — **suggested, not required** — promoted, repeatable workflows (Workflow B). When a one-off intent proves worth repeating, the user moves or copies it here as a named pipeline template. The mapper scans this directory and surfaces available pipelines in the orientation map. See §5.5.
 
 **Do not commit** (covered by `.mwp/.gitignore`):
 
@@ -530,6 +596,10 @@ protocol.md
 ├── .gitignore                  # tracks what to keep vs. ignore in this directory
 ├── topology.md                 # committed: workspace map generated by bootstrap
 ├── discoveries.md              # committed: session findings and decisions
+├── intents/                   # committed (suggested): active task intent files
+│   └── <task-name>.md         # one per current task; included in workspace map when present
+├── pipelines/                 # committed (suggested): promoted repeatable workflows
+│   └── <pipeline-name>.md     # abstracted from one-off intents; surfaced in orientation map
 ├── modules/                   # gitignored: pinned git module clones, keyed by commit SHA
 │   └── <sha>/
 ├── guards.cache.json           # gitignored: guard execution results with TTLs (see §7)
@@ -572,6 +642,47 @@ Each entry is a JSON file containing the full IR plus metadata:
 ```
 
 The `contributing_files` list lets the mapper check staleness efficiently: re-hash those files, compare to `inputs_hash`. If equal, serve from cache. If different, re-traverse and overwrite the entry.
+
+### 5.5 Intent and pipeline directories (Workflow B accommodation)
+
+> **What these are.** Van Clief's Workflow B — intent-driven pipelines — is user discipline. The tool does not enforce it. These two directories are the tool's accommodation: suggested locations the mapper recognises and scans, so that users who adopt the pipeline pattern get it included in the map automatically. Neither directory is required. A project with neither works fully.
+
+#### Consistent mapper behaviour for both directories
+
+The mapper treats `.mwp/intents/` and `.mwp/pipelines/` the same way in every map: it lists the paths of files present in each directory, nothing more. The file names are the documentation — `add-orders-view.md`, `migrate-auth-tokens.md`, `release-checklist.md` are self-describing; the LLM reads the name and knows what the file is for. No additional prose documentation or wrapper files are needed.
+
+The listing appears in every workspace map, not only in the orientation pass. This is intentional: a developer deep in `backend/src/api/routes.ts` should see that `add-orders-view.md` is an active intent, without having to return to a project-level view first. The paths are compact (one line per file), so the cost is negligible.
+
+File content is **not** loaded into the map automatically. The LLM reads the name, decides whether it is relevant, and requests the file if needed. This avoids ballooning the map with the full text of multiple intent or pipeline documents — the naming convention carries the signal; the content is on demand.
+
+#### `.mwp/intents/`
+
+**Purpose:** Active task intent files. Before starting a non-trivial task, the user writes a short `<task-name>.md` describing what they intend to do and why. This is the starting file of a Workflow B pipeline for that task.
+
+**Naming discipline:** The file name is the primary signal. Use a concise, action-oriented name that tells the LLM what the task is — `add-orders-view.md`, `migrate-auth-tokens.md`, `refactor-auth-middleware.md`. A name that requires the file to be read to understand what the task is defeats the purpose.
+
+**Lifecycle:** The user creates the file before work begins, updates it as understanding evolves, and deletes or archives it when the task is done. The directory is committed — intent history is useful; it tells future sessions what was attempted and why.
+
+#### `.mwp/pipelines/`
+
+**Purpose:** Promoted, repeatable workflows. When a one-off intent proves worth repeating — a release checklist, a feature scaffolding sequence, a debugging runbook — the user moves or copies it here as a named pipeline template.
+
+**Naming discipline:** Same principle: `release-checklist.md`, `feature-scaffold.md`, `db-migration.md`. The name tells the LLM what the pipeline is for; it reads the file only when the pipeline is relevant to the current task.
+
+**Promotion signal:** `mwp doctor` warns when the same intent pattern appears more than once across archived intents without a corresponding pipeline — a nudge that abstraction may be warranted. The decision to promote remains the user's.
+
+**Example layout:**
+```text
+.mwp/
+├── intents/
+│   ├── add-orders-view.md          # active: task started, in progress
+│   └── migrate-auth-tokens.md      # active: separate task, parallel
+└── pipelines/
+    ├── feature-scaffold.md         # promoted: use this to start any new feature
+    └── release-checklist.md        # promoted: always run before cutting a release
+```
+
+`mwp init` scaffolds both directories with a `.gitkeep` and a brief comment explaining their purpose. They appear in `mwp doctor` output when absent from a project that has been running for more than a few sessions — a gentle suggestion, not an error.
 
 ---
 
@@ -907,7 +1018,7 @@ Items below are individually small and prioritized by whatever the author actual
 - `mwp doctor` — health check on a project's MWP setup.
 - VS Code extension that calls the MCP server.
 - A `mwp publish` helper that tags and pushes a Git module so others can `import` it by SHA.
-- **`mwp-base`** — the first community module, published as a Git repo. Contains a root `.mwp-context.md` that explains the MWP cascade convention itself: what each layer means, how to read the generated preamble, what a well-formed `.mwp-context.md` looks like. The file demonstrates the convention by being an instance of it — an LLM (or a new human contributor) that reads it understands the pattern without reading the spec. This is the onboarding artifact Van Clief's paper describes as the "generic root .mwp-context.md that explains the convention itself." As a published module, it becomes the natural base that other community modules extend.
+- **`mwp-base`** — the first community module, published as a Git repo. Contains a `.mwp-module.md` manifest whose linked content files explain the MWP cascade convention itself: what each layer means, how to read the generated preamble, what a well-formed `.mwp-context.md` looks like. The content demonstrates the convention by being an instance of it — an LLM (or a new human contributor) that reads it understands the pattern without reading the spec. This is the onboarding artifact Van Clief's paper describes as the "generic root context file that explains the convention itself." As a published module, it becomes the natural base that other community modules extend.
 
 Explicitly deferred: vector search, autonomous agents, LLM-driven summarization, registry hosting.
 
@@ -963,7 +1074,7 @@ These are real, not rhetorical. Each one is something to revisit when implementa
 1. **Token counting under disagreement.** Different models tokenize differently. v1 ships one counter and warns when the map is being rendered for a model whose tokenizer disagrees by more than a few percent. Is that acceptable?
 2. **Recursive scope semantics.** Should `scope: recursive` apply to every descendant or only to descendants without their own same-named file? Current draft says "merge, not shadow" but real projects will surface the right answer.
 3. **Guard output in IR.** Should guard `stdout` ever be embedded in the rendered context? Probably not by default — it could leak large blobs — but a `guards: [{ include_output_on_fail: true }]` flag may be worth it.
-4. **Stage progression.** Pipelines (`<NN>_<stage>/`) are recognised by the convention but the v1 mapper does not yet *enforce* stage ordering. Whether `mwp` should grow a `next-stage` command or stay agnostic is a question for after Phase 3.
+4. ~~**Stage progression.**~~ **Resolved — stays agnostic.** The tool does not enforce pipeline discipline. Van Clief's staged pattern (`<NN>_<stage>/` folders, `intent.md` → LLM → `output.md` → human review → next stage) is a recommended workflow users can adopt. A project that uses it declares it in `.mwp-context.md`; the LLM, once oriented by the map, will naturally offer pipeline-style guidance. No `next-stage` command will be added.
 5. **Sharing model.** Pinned Git URLs work. They are not friendly to non-technical users. Whether and when to add a thin "named module" indirection (a `.mwp/registry.toml` that maps names to URLs) is open.
 6. **Conflict between `imports` and the natural cascade.** If `dev/.mwp-context.md` imports a module that also defines a `RULES.md`, where does the imported file sit in the layer order? Current proposal: imports inherit the importing entry's layer and sort lower in priority. This needs real examples to validate.
 8. **Nested workspace resolution edge cases.** The two-level anchor walk (sub-project root → workspace root) is clear for the common case. Three cases need resolution when implementation starts: (a) a sub-project's `workspace:` import references a member path that doesn't have its own `.mwp` — is that an error or does the mapper treat the directory as an implicit member? (b) a workspace root declares `members` but a `members` entry also declares `members` — does the mapper recurse, or is nesting capped at two levels? (c) `workspace:` imports when the sub-project is run standalone (no parent workspace) are currently reported as warnings and skipped — should the mapper try to fall back to a `git:` URL declared alongside the `workspace:` path as a resolution hint? This would let a .mwp-context.md express "use the local version if in the workspace, otherwise fetch from git."
@@ -994,9 +1105,9 @@ The order is intentional: each scenario is the smallest thing that proves the ph
 
 Engram is a deterministic reasoning kernel — a confidence-weighted directed graph that stores confirmed resolution patterns and serves as an operational layer for LLM workflows. Its documented deployment contexts include:
 
-- **LLM agent mesh / cost optimizer** (primary target): a fleet of specialist graphs, one per domain, that handle bounded queries deterministically. The LLM is only engaged for genuinely novel cases; each resolution it confirms teaches the graph, shrinking the LLM's load over time. In a mature bounded domain, 70–80% of queries are projected to route through the graph without any model call (these are projections, not measured results — see Engram's own honest status section).
-- **MCP knowledge database**: the LLM calls Engram as a tool mid-reasoning. Instead of a text chunk, it receives a typed reasoning path — confidence score, ruled-out candidates, resolved dimensions — and feeds confirmed answers back into the graph.
+- **MCP knowledge database**: the LLM calls Engram as a tool mid-reasoning. Instead of a text chunk, it receives a typed reasoning path — confidence score, ruled-out candidates, resolved dimensions — and feeds confirmed answers back into the graph. Applicable in any MCP-aware client (Claude Code, Claude Desktop, Cursor).
 - **LLM tool security boundary**: a policy engine sits between the LLM and the execution layer. Every action the LLM can trigger is explicitly enumerated in a contract file. Structural impossibility replaces prompt guardrails.
+- **LLM agent mesh / cost optimizer**: a fleet of specialist graphs, one per domain, that handle bounded queries deterministically. The LLM is only engaged for genuinely novel cases; each resolution it confirms teaches the graph, shrinking the LLM's load over time. In a mature bounded domain, 70–80% of queries are projected to route through the graph without any model call (these are projections, not measured results — see Engram's own honest status section). This benefit applies to programmatic and automated-pipeline contexts; in an interactive chat session the user is the primary caller and there is no routing layer to intercept queries.
 - **Team knowledge distillation, compliance routing, event-driven automation, embedded/offline diagnostics, technical debt mapping, and more** — see the full [use cases document](https://github.com/dominikj111/Engram/blob/main/docs/use_cases.md).
 
 The core mechanic: nodes represent concepts and states; edges represent transitions with confidence weights. Confirmed outcomes strengthen paths; rejected or uncertain outcomes decay them. The graph learns from every session. What gets stored is the pattern — never the raw conversation, never attribution.
@@ -1023,6 +1134,17 @@ Engram's persona graphs (described in its future directions) are separable domai
 
 ### How they relate
 
-They address different failure modes and operate at different moments. MWP handles the cost and inconsistency of reconstructing working context by hand at the start of a session. Engram handles the cost and inconsistency of re-deriving the same operational answers repeatedly across sessions.
+Both tools move the LLM closer to the actual problem by narrowing its working surface — from different directions. MWP narrows the *input*: a bounded, layered, verified context cascade means the LLM starts each session already oriented rather than reconstructing context from scratch. Engram narrows the *operational layer*: typed reasoning paths replace re-derivation of known answers, a policy contract replaces brittle prompt guardrails, and persona graphs encode distilled domain expertise the LLM can draw on mid-session. Less overhead at the start; less overhead during the work; more focus on what is genuinely novel.
 
-In a workflow that uses both: MWP orients the session upfront — the LLM knows the project's conventions, constraints, and domain before it begins. Engram handles the operational layer — known query patterns route through the graph without LLM involvement, and novel outcomes feed back into the graph. Neither requires the other. Both share the conviction that the LLM should not be the primary source of structure in a workflow.
+In a workflow that uses both: MWP handles the pre-session layer — the LLM knows the project's conventions, constraints, and domain before it begins. Engram handles the session layer — as an MCP tool it answers bounded operational queries with structured paths rather than model inference, and its policy engine enforces the action boundary when tool use is in play. Novel outcomes feed back into the graph. Neither requires the other. Both share the conviction that the LLM should not be the primary source of structure in a workflow.
+
+### Engram vs. LangChain and AutoGen
+
+LangChain and AutoGen are runtime orchestration frameworks — they coordinate tool calls, chain prompts, and route between agents. They solve a different problem from Engram: not *what the LLM knows*, but *how multiple LLM calls are sequenced and coordinated*.
+
+The key differences:
+
+- **LangChain** agents route decisions through the LLM at runtime — the model reasons each time about which tool to call and what to do next. Non-deterministic, no audit trail on the decisions themselves, re-derived every session. Engram handles the same class of bounded operational decisions deterministically, without a model call, and with a full path trace.
+- **AutoGen** solves the "specialist knowledge" problem by spinning up separate briefed agents per domain, paying per-session briefing overhead and agent-to-agent handoff cost. It also has no structural policy boundary between agents and executable actions. Engram addresses both: one graph per domain (no briefing cost), and a contract file that enumerates every triggerable action (structural impossibility replaces prompt guardrails).
+
+They compose naturally. A LangChain or AutoGen agent can call Engram as an MCP tool and receive a typed reasoning path — confidence score, ruled-out candidates, resolved dimensions — instead of re-deriving the answer from scratch. Engram reduces how much the orchestration layer needs to rely on the LLM for decisions it has already resolved. Neither replaces the other.
