@@ -42,7 +42,21 @@ When the target is known, follow this sequence **before doing any work**:
    that were learned from the cascade or from reading source. Written now for future
    sessions; the current session already has them in context.
 
-3. **Proceed** — context is now enriched from topology, discoveries, and the cascade.
+3. **Before automated write actions** (commits, deploys, code changes) — run the verifier:
+
+   ```bash
+   bash .mwp/mwp-verify.sh [target-directory]
+   ```
+
+   - Exit 0 (or "cache hit") → proceed normally.
+   - Exit 1 → context is **read-only**. Inform the user, do not apply code changes or
+     commits until the failing guards are resolved. The failure is logged to
+     `.mwp/discoveries.md` and a diagnostics file under `.mwp/cache/`.
+
+   The verifier is optional for read-only exploration sessions. Run it whenever the
+   session will produce side effects.
+
+4. **Proceed** — context is now enriched from topology, discoveries, and the cascade.
 
 ---
 

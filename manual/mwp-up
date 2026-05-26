@@ -97,6 +97,7 @@ concat-context.sh
 changes.sh
 search.sh
 context-scaffold.sh
+mwp-verify.sh
 uninstall.sh
 protocol.md
 EOF
@@ -112,6 +113,7 @@ fetch_script "$BASE_URL/concat-context.sh"  ".mwp/concat-context.sh"
 fetch_script "$BASE_URL/search.sh"          ".mwp/search.sh"
 fetch_script "$BASE_URL/changes.sh"         ".mwp/changes.sh"
 fetch_script "$BASE_URL/context-scaffold.sh" ".mwp/context-scaffold.sh"
+fetch_script "$BASE_URL/mwp-verify.sh"      ".mwp/mwp-verify.sh"
 fetch_script "$BASE_URL/uninstall.sh"       ".mwp/uninstall.sh"
 
 # ── Protocol ──────────────────────────────────────────────────────────────────
@@ -142,18 +144,18 @@ printf "  ${BOLD}Next step${NC} — add the following block to your %sCLAUDE.md%
 printf "  (or equivalent LLM session init file):\n"
 printf "\n"
 printf "%s" "$DIM"
-printf "  ┌─────────────────────────────────────────────────────────────┐\n"
-printf "%s" "$NC"
-printf "  %s│%s @.mwp/protocol.md\n" "$DIM" "$NC"
-printf "  %s│%s\n" "$DIM" "$NC"
-printf "  %s│%s At every session start:\n" "$DIM" "$NC"
-printf "  %s│%s   1. Run \`bash .mwp/changes.sh\`\n" "$DIM" "$NC"
-printf "  %s│%s   2. Read \`.mwp/topology.md\`\n" "$DIM" "$NC"
-printf "  %s│%s   3. Read \`.mwp/discoveries.md\` (if it exists)\n" "$DIM" "$NC"
-printf "  %s│%s\n" "$DIM" "$NC"
-printf "  %s│%s When a target is known:\n" "$DIM" "$NC"
-printf "  %s│%s   - Run \`bash .mwp/concat-context.sh <target>\` ONCE\n" "$DIM" "$NC"
-printf "  %s│%s   - Update \`.mwp/discoveries.md\` with new findings\n" "$DIM" "$NC"
-printf "%s" "$DIM"
-printf "  └─────────────────────────────────────────────────────────────┘\n"
+printf "@.mwp/protocol.md\n"
+printf "\n"
+printf "At every session start:\n"
+printf "\n"
+printf "1. Run \`bash .mwp/changes.sh\`\n"
+printf "2. Read \`.mwp/topology.md\`\n"
+printf "3. Read \`.mwp/discoveries.md\` (if it exists)\n"
+printf "\n"
+printf "When a target is known:\n"
+printf "\n"
+printf "%s" "- Run \`bash .mwp/concat-context.sh <target>\` ONCE"
+printf "\n"
+printf "%s" "- Update \`.mwp/discoveries.md\` with new findings"
+printf "\n"
 printf "%s\n" "$NC"

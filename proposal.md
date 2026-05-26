@@ -347,6 +347,12 @@ guards:                     # verified-reference checks (see §7)
   - cmd: cargo test --lib
     cache_for: 10m
     trust: project
+verified_paths:             # files whose change invalidates guard cache (default: all src files)
+  - src/api/
+  - tests/smoke/
+  - .mwp-context.md
+owners:                     # who is responsible for keeping this context accurate
+  - team-backend
 priority: 80                # tiebreaker within the same layer (default 50)
 ---
 
@@ -382,6 +388,18 @@ Three import kinds, each with a distinct resolution rule:
 `../` is never needed for ancestor context because the cascade delivers it for free. It is flagged by `mwp lint`. For cross-sibling references in a monorepo, `workspace:` is the correct mechanism — it makes the horizontal dependency explicit and anchors the path at the project root rather than the declaring file, which makes refactoring and tooling validation straightforward.
 
 `.mwp-context.md` is the only reserved filename. Any additional files a team wants to include — rules, conventions, reference material — should be referenced from within `.mwp-context.md` using `local:` imports. There is no prescribed layout beyond the index file itself.
+
+#### Context granularity
+
+Keep individual context files small. A useful target is **2k–8k tokens per context stage** — enough to be substantive, small enough not to dominate the token budget when the cascade is stacked. If a single `.mwp-context.md` grows beyond that, split it by concern:
+
+```text
+.mwp-context.md          # routing and ownership — always loaded
+.mwp-context.api.md      # API contracts and surface rules — included via local: import
+.mwp-context.testing.md  # test conventions and smoke gates — included via local: import
+```
+
+The root `.mwp-context.md` remains the cascade entry point and declares the imports. This keeps the cascade fast and avoids delivering testing conventions to a session focused purely on routing. Sections to consider when splitting: **Routing** (where this context applies), **Contracts** (rules the code must obey), **References** (files the model should inspect), **Assumptions** (invariants guards verify), **Known Failure Modes** (common drift points).
 
 #### LLM instruction files as sub-application boundaries
 
@@ -764,6 +782,20 @@ The MCP server never grows a "trust this" tool. The author is responsible for pr
 ```
 
 A reference whose guard is `failed` or `stale` is included in the IR but **flagged**. The renderer surfaces this clearly — typically by wrapping the reference in a `> ⚠️ This reference's check is failing (cargo test exited 101)` callout, so the LLM has to actively decide whether to trust it.
+
+### 7.4 Fail-safe mode
+
+When any guard in the map is in `failed` status, the workspace map enters **fail-safe mode**:
+
+- The map is still produced and the context is still loadable — sessions remain informative.
+- The map is marked `read_only: true` in the IR preamble.
+- The renderer prepends a prominent block-level warning to the output.
+- Automated write actions — commits, deploys, code modifications initiated from the session — **must not proceed** until the failing guard is fixed or explicitly overridden by a human.
+- Guard diagnostics are appended to `.mwp/discoveries.md` so they survive session compaction and are visible to future sessions.
+
+The distinction between `failed` (guard ran and did not pass) and `stale` (guard ran but TTL expired) is intentional: a `stale` guard causes a warning but does not engage fail-safe mode. A stale invariant may still hold; a failed one demonstrably does not.
+
+This is the U-shaped intervention pattern from the ICM-MWP paper made mechanical: the tool cannot stop the user from proceeding, but it makes the broken state impossible to ignore and gives a clear signal to any automated pipeline watching the IR.
 
 ---
 
