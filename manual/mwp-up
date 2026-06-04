@@ -101,6 +101,7 @@ context-scaffold.sh
 mwp-verify.sh
 uninstall.sh
 protocol.md
+cache/
 EOF
   ok "Created       .mwp/.gitignore"
 else
