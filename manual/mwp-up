@@ -99,9 +99,14 @@ changes.sh
 search.sh
 context-scaffold.sh
 mwp-verify.sh
+md-index.sh
+md-index.py
 uninstall.sh
 protocol.md
 cache/
+skill/
+hooks/
+
 EOF
   ok "Created       .mwp/.gitignore"
 else
@@ -116,7 +121,18 @@ fetch_script "$BASE_URL/search.sh"          ".mwp/search.sh"
 fetch_script "$BASE_URL/changes.sh"         ".mwp/changes.sh"
 fetch_script "$BASE_URL/context-scaffold.sh" ".mwp/context-scaffold.sh"
 fetch_script "$BASE_URL/mwp-verify.sh"      ".mwp/mwp-verify.sh"
+fetch_script "$BASE_URL/md-index.sh"       ".mwp/md-index.sh"
+fetch_file   "$BASE_URL/md-index.py"       ".mwp/md-index.py"
 fetch_script "$BASE_URL/uninstall.sh"       ".mwp/uninstall.sh"
+
+# ── Skill and Hooks ───────────────────────────────────────────────────────────
+mkdir -p .mwp/skill
+mkdir -p .mwp/hooks
+
+fetch_file "$BASE_URL/skill/SKILL.md"      ".mwp/skill/SKILL.md"
+fetch_file "$BASE_URL/skill/handoff.skill.md" ".mwp/skill/handoff.skill.md"
+fetch_file "$BASE_URL/skill/mapping.skill.md" ".mwp/skill/mapping.skill.md"
+fetch_script "$BASE_URL/hooks/mwp-guard.sh" ".mwp/hooks/mwp-guard.sh"
 
 # ── Protocol ──────────────────────────────────────────────────────────────────
 fetch_file "$BASE_URL/protocol.md" ".mwp/protocol.md"
@@ -159,5 +175,13 @@ printf "\n"
 printf "%s" "- Run \`bash .mwp/concat-context.sh <target>\` ONCE"
 printf "\n"
 printf "%s" "- Update \`.mwp/discoveries.md\` with new findings"
+printf "\n"
+printf "%s" "- Map large files: \`bash .mwp/md-index.sh <file.md>\`"
+printf "\n"
+printf "\n"
+printf "  ${BOLD}AI/LLM Assistant Integration${NC}\n"
+printf "  MWP includes Agentic Skills and Hooks for automated workflows:\n"
+printf "  - ${CYAN}Skills${NC}: Check \`.mwp/skill/SKILL.md\` for agent instructions\n"
+printf "  - ${CYAN}Hooks${NC}: Integration point for tools like Crush (see \`.mwp/hooks/\`)\n"
 printf "\n"
 printf "%s\n" "$NC"
