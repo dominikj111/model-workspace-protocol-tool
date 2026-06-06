@@ -36,24 +36,18 @@ download() {
 fetch_script() {
   url="$1"
   dest="$2"
-  if [ -f "$dest" ]; then
-    info "Kept existing  $(basename "$dest")"
-    return
-  fi
+  if [ -f "$dest" ]; then verb="Updated   "; else verb="Downloaded"; fi
   download "$url" "$dest"
   chmod +x "$dest"
-  ok "Downloaded    $(basename "$dest")"
+  ok "$verb    $(basename "$dest")"
 }
 
 fetch_file() {
   url="$1"
   dest="$2"
-  if [ -f "$dest" ]; then
-    info "Kept existing  $(basename "$dest")"
-    return
-  fi
+  if [ -f "$dest" ]; then verb="Updated   "; else verb="Downloaded"; fi
   download "$url" "$dest"
-  ok "Downloaded    $(basename "$dest")"
+  ok "$verb    $(basename "$dest")"
 }
 
 # ── Header ────────────────────────────────────────────────────────────────────
@@ -80,15 +74,15 @@ fi
 header "Setting up .mwp/"
 
 if [ -d ".mwp" ]; then
-  info ".mwp/ exists — existing files kept, missing ones downloaded"
+  info ".mwp/ exists — updating all tool files"
 else
   mkdir -p .mwp
   ok "Created .mwp/"
 fi
 
 # ── Write .mwp/.gitignore ─────────────────────────────────────────────────────
-if [ ! -f ".mwp/.gitignore" ]; then
-  cat > .mwp/.gitignore << 'EOF'
+if [ -f ".mwp/.gitignore" ]; then verb="Updated   "; else verb="Created   "; fi
+cat > .mwp/.gitignore << 'EOF'
 # MWP scripts are re-downloaded via mwp-up after a fresh clone.
 # Only topology.md and discoveries.md should be committed.
 bootstrap.sh
@@ -108,10 +102,7 @@ skill/
 hooks/
 
 EOF
-  ok "Created       .mwp/.gitignore"
-else
-  info "Kept existing  .mwp/.gitignore"
-fi
+ok "$verb    .mwp/.gitignore"
 
 # ── Scripts ───────────────────────────────────────────────────────────────────
 fetch_script "$BASE_URL/bootstrap.sh"       ".mwp/bootstrap.sh"

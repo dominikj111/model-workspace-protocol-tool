@@ -14,99 +14,107 @@ fi
 [ ! -d "$_r/.mwp" ] && { echo "Error: .mwp/ not found." >&2; exit 1; }
 cd "$_r" || exit 1
 
-# Create .mwpignore with commented defaults if absent
-[ -f .mwpignore ] || cat > .mwpignore << 'EOF'
-# Project-specific exclusions for workspace map (one pattern per line, grep -vE semantics)
-# node_modules/, .git/, target/ are always excluded regardless of this file
+# Create .mwpignore with defaults if absent
+if [ ! -f .mwpignore ]; then
+  cat > .mwpignore << 'EOF'
+# Project-specific exclusions for workspace map (one pattern per line)
+# Used to prune directories from topology crawl.
+
+.git/
+node_modules/
+target/
+dist/
+vendor/
+build/
+.cache/
+
+# Patterns:
 # generated/
-# vendor/
 # fixtures/
 # *.snap
 EOF
+fi
 
-# Filter: applies .mwpignore on top of the hardcoded base exclusions
-mwp_filter() {
-  local pattern
-  pattern=$(grep -v '^[[:space:]]*#' .mwpignore 2>/dev/null \
-            | grep -v '^[[:space:]]*$' \
-            | tr '\n' '|' | sed 's/|$//')
-  if [ -n "$pattern" ]; then grep -vE "$pattern"; else cat; fi
+# Build find -prune expression from .mwpignore
+P_PATTERNS=""
+while IFS= read -r line || [ -n "$line" ]; do
+  [[ "$line" =~ ^[[:space:]]*# ]] && continue
+  [[ -z "${line// /}" ]] && continue
+  
+  p=$(echo "$line" | sed 's|[[:space:]]*$||; s|/*$||')
+  [[ "$p" != ./* ]] && p="./$p"
+  
+  if [ -z "$P_PATTERNS" ]; then
+    P_PATTERNS="-path '$p' -o -path '$p/*'"
+  else
+    P_PATTERNS="$P_PATTERNS -o -path '$p' -o -path '$p/*'"
+  fi
+done < .mwpignore
+
+# Helper for running find with pruning
+mwp_find() {
+  local maxdepth_arg=""
+  [ -n "$1" ] && maxdepth_arg="-maxdepth $1"
+  shift
+  
+  if [ -n "$P_PATTERNS" ]; then
+    eval "find . $maxdepth_arg \( $P_PATTERNS \) -prune -o \( $@ \) -print"
+  else
+    find . $maxdepth_arg \( $@ \) -print
+  fi
 }
 
 {
-  # Sub-project root markers
   echo "# Workspace Topology"
   echo ""
   echo "## Sub-project Markers"
-  find . -maxdepth 4 \
-    \( -name "package.json" -o -name "Cargo.toml" -o -name "pyproject.toml" \
-       -o -name "go.mod"    -o -name "build.gradle" -o -name "pom.xml" \
-       -o -name ".mwp" \) \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 4 -name "package.json" -o -name "Cargo.toml" -o -name "pyproject.toml" \
+             -o -name "go.mod"    -o -name "build.gradle" -o -name "pom.xml" \
+             -o -name ".mwp" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # .mwp-context.md files
   echo "## .mwp-context.md Files"
-  find . -name ".mwp-context.md" \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*'       -not -path '*/.mwp/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find "" -name ".mwp-context.md" \
+    | grep -v '\./\.mwp/' \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # Entry points
   echo "## Entry Points"
-  find . -maxdepth 5 \
-    \( -name "index.ts" -o -name "index.js" -o -name "main.ts" \
-       -o -name "main.rs" -o -name "main.go" -o -name "main.py" \
-       -o -name "app.ts"  -o -name "server.ts" \) \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 5 -name "index.ts" -o -name "index.js" -o -name "main.ts" \
+             -o -name "main.rs" -o -name "main.go" -o -name "main.py" \
+             -o -name "app.ts"  -o -name "server.ts" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # Infrastructure and config files
   echo "## Infrastructure and Config"
-  find . -maxdepth 4 \
-    \( -name "Dockerfile" -o -name "docker-compose*.yml" \
-       -o -name ".env.example" \
-       -o -name "vite.config.*" -o -name "next.config.*" \
-       -o -name "*.config.ts"   -o -name "*.config.js" \) \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
-  find . -maxdepth 3 \
-    \( -path '*/.github/workflows/*.yml' -o -name ".travis.yml" \
-       -o -name "Jenkinsfile" \) \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 4 -name "Dockerfile" -o -name "docker-compose*.yml" \
+             -o -name ".env.example" \
+             -o -name "vite.config.*" -o -name "next.config.*" \
+             -o -name "*.config.ts"   -o -name "*.config.js" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 3 -path '*/.github/workflows/*.yml' -o -name ".travis.yml" \
+             -o -name "Jenkinsfile" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # Monorepo workspace files
   echo "## Monorepo Workspace Files"
-  find . -maxdepth 2 \
-    \( -name "pnpm-workspace.yaml" -o -name "lerna.json" \
-       -o -name "nx.json"          -o -name "turbo.json" \
-       -o -name "rush.json" \) \
-    -not -path '*/.git/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 2 -name "pnpm-workspace.yaml" -o -name "lerna.json" \
+             -o -name "nx.json"          -o -name "turbo.json" \
+             -o -name "rush.json" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # API and schema definitions
   echo "## API and Schema Definitions"
-  find . -maxdepth 5 \
-    \( -name "openapi.yml" -o -name "openapi.yaml" -o -name "swagger.yml" \
-       -o -name "swagger.yaml" -o -name "*.graphql" -o -name "*.proto" \
-       -o -name "*.prisma"     -o -name "schema.sql" \) \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 5 -name "openapi.yml" -o -name "openapi.yaml" -o -name "swagger.yml" \
+             -o -name "swagger.yaml" -o -name "*.graphql" -o -name "*.proto" \
+             -o -name "*.prisma"     -o -name "schema.sql" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  # README files at sub-project roots
   echo "## README Files"
-  find . -maxdepth 3 -name "README.md" \
-    -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
+  mwp_find 3 -name "README.md" \
+    | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 } > .mwp/topology.md
 
