@@ -69,12 +69,16 @@ When the target is known, follow this sequence **before doing any work**:
 
 ---
 
-## Creating .mwp-context.md files
+## Creating and Maintaining .mwp-context.md files
+
+A `.mwp-context.md` is **not a session memory file** or a work log; it is a strictly **directory-descriptive document**. Think of it as a "mini-AGENTS.md" or "mini-CLAUDE.md" for a specific scope. It defines the terrain, constraints, and additional tooling (skills/hooks) available to any agent operating within that subdirectory.
 
 A `.mwp-context.md` is a brief paragraph — a few sentences — describing what a directory owns,
 its key constraints, and anything non-obvious. It is concatenated with siblings in the
 cascade, so length directly costs tokens for every future session targeting that scope.
 Keep it tight.
+
+**AI/LLM Maintenance:** While primarily human-curated, AI assistants SHOULD propose updates or new `.mwp-context.md` files when they discover stable patterns, architectural decisions, or "surprises" that would benefit future sessions.
 
 While exploring, watch for directories where a `.mwp-context.md` would add lasting value.
 Good candidates:
@@ -87,16 +91,16 @@ Good candidates:
 Do **not** create one per folder — only where the scope is meaningful and the content
 would be non-trivial to derive from the code alone.
 
-Before creating a `.mwp-context.md`, ask the user targeted questions. Tell them explicitly
-that the questions are prompted by the MWP protocol to ensure accuracy rather than
-inference. Good questions:
+### Workflow for Context Files
+
+Before creating or significantly updating a `.mwp-context.md`, ask the user targeted questions. Tell them explicitly that the questions are prompted by the MWP protocol to ensure accuracy rather than inference. Good questions:
 
 - What does this directory own and what is outside its scope?
 - Are there hard constraints (size budgets, forbidden patterns, required return types)?
 - What stack or tooling decisions apply specifically here?
 - What would surprise a developer opening this directory for the first time?
 
-Write the answers as a `.mwp-context.md` in that directory.
+**Action:** Use `bash .mwp/context-scaffold.sh <dir>` to create a new stub, then replace the comments with the brief paragraph.
 
 ---
 

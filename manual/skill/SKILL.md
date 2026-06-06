@@ -33,5 +33,8 @@ Before any **side-effect actions** (writes, deletes, commits, deploys):
 ## 📝 Documenting the Terrain
 
 *   **Topology**: Regenerate via `bash .mwp/bootstrap.sh` if directory structure changes significantly.
-*   **Context Files**: Create `.mwp-context.md` in key directories to describe ownership and constraints. Use `bash .mwp/context-scaffold.sh <dir>`.
+*   **Context Files**: Proactively maintain `.mwp-context.md` files in key directories.
+    *   **Scope**: These are strictly descriptive "mini-AGENTS.md" terrain maps, not session memory or work logs.
+    *   **Propose Update**: If you learn stable architectural rules or "surprises", ask the user if you should record them to save future tokens.
+    *   **Create**: Use `bash .mwp/context-scaffold.sh <dir>` for new scopes.
 *   **Discoveries**: Always suffix inferences with `?` (e.g., `stack?: Go`). Be factual and traceable.
