@@ -1,8 +1,17 @@
 # Workspace Mapping Protocol
 
-**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md` → proceed) → Creating .mwp-context.md files → Persistence rules → Five context layers.
+**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.md files → Persistence rules → Five context layers.
 
 Both files live in `.mwp/`. `topology.md` is regenerable. `discoveries.md` is permanent, human-curated accumulation.
+
+---
+
+## Agentic Skills & Hooks
+
+The manual implementation includes skills and hooks to automate the protocol for AI agents:
+
+- **Skills**: `.mwp/skill/SKILL.md` contains the system prompt and instructions for the agent. If your agent supports skills, it should load this at the start of the session.
+- **Hooks**: `.mwp/hooks/mwp-guard.sh` is a verification hook that automatically runs `mwp-verify.sh` before write actions. This ensures the agent never modifies a read-only context.
 
 ---
 
@@ -100,6 +109,7 @@ Write to `discoveries.md`:
 - `convention:` — coding or architectural rules in force
 - `dependency:` — explicit cross-sub-project relationships
 - `constraint:` — hard limits (size, performance, security, compliance)
+- `skill:` — custom agentic skills available in this scope
 - `owner:` — team or person responsible
 
 Suffix `?` on any item inferred rather than directly observed:
@@ -108,6 +118,7 @@ Suffix `?` on any item inferred rather than directly observed:
 - stack: Node.js, TypeScript
 - stack?: tRPC  (inferred from ./backend/package.json dependency)
 - boundary: owns HTTP API layer, no direct browser access
+- skill: use .mwp/skill/handoff.skill.md for task delegation
 - constraint?: bundle < 200 KB  (inferred from ./frontend/README.md)
 ```
 
@@ -139,6 +150,8 @@ More specific (closer to target) overrides less specific when they conflict.
 ---
 
 ## Notes
+
+**Skills and Hooks** are manual-implementation extensions that automate MWP compliance for agentic sessions. They use `.mwp/skill/` and `.mwp/hooks/` to bridge the gap between static docs and active enforcement.
 
 **`topology.md` and `discoveries.md`** are pre-tool scaffolding introduced by this manual
 implementation. When mwp-tool ships, `topology.md` is replaced by the tool's deterministic
