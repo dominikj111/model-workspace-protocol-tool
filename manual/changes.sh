@@ -35,9 +35,25 @@ if [ ! -f "$TOPOLOGY" ]; then
 else
   stale=$(find . \
     \( -name "package.json" -o -name "Cargo.toml" -o -name "pyproject.toml" \
-       -o -name "go.mod"    -o -name "build.gradle" -o -name "pom.xml" \) \
+       -o -name "go.mod" -o -name "build.gradle" -o -name "pom.xml" \
+       -o -name ".mwp-context.md" \
+       -o -name "Dockerfile" -o -name "docker-compose*.yml" -o -name ".env.example" \
+       -o -name "vite.config.*" -o -name "next.config.*" \
+       -o -name "*.config.ts" -o -name "*.config.js" \
+       -o -name "index.ts" -o -name "index.js" -o -name "main.ts" \
+       -o -name "main.rs" -o -name "main.go" -o -name "main.py" \
+       -o -name "app.ts" -o -name "server.ts" \
+       -o -name "pnpm-workspace.yaml" -o -name "lerna.json" -o -name "nx.json" \
+       -o -name "turbo.json" -o -name "rush.json" \
+       -o -name "openapi.yml" -o -name "openapi.yaml" -o -name "swagger.yml" \
+       -o -name "swagger.yaml" -o -name "*.graphql" -o -name "*.proto" \
+       -o -name "*.prisma" -o -name "schema.sql" \
+       -o -name "README.md" \
+       -o -path '*/.github/workflows/*.yml' \
+       -o -name ".travis.yml" -o -name "Jenkinsfile" \
+       -o -name ".mwp" \) \
     -not -path '*/node_modules/*' -not -path '*/.git/*' \
-    -not -path '*/target/*' \
+    -not -path '*/target/*' -not -path '*/dist/*' -not -path '*/.cache/*' -not -path '*/.mwp/*' \
     -newer "$TOPOLOGY" 2>/dev/null)
   if [ -n "$stale" ]; then
     echo "WARNING: topology.md may be stale — project markers changed since last bootstrap:"
