@@ -1,3 +1,7 @@
+---
+version: "0.1.0"
+---
+
 # Workspace Mapping Protocol
 
 **Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.md files → Persistence rules → Five context layers.

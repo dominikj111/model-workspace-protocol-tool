@@ -129,6 +129,14 @@ curl --proto '=https' --tlsv1.2 -sSf \
 
 `mwp-up` skips any files that already exist, so re-running it is always safe.
 
+To check for a newer manual implementation, run:
+
+```bash
+bash .mwp/upgrade.sh
+```
+
+`upgrade.sh` compares `.mwp/protocol.md` with the remote protocol version and re-runs `mwp-up` only when the installed version is missing or older.
+
 ---
 
 ## Removing MWP from a project
@@ -153,6 +161,7 @@ a confirmation prompt and a count of what will be deleted. Then drop the **mwp**
 | `changes.sh`            | Session-start orientation — downloaded to `.mwp/changes.sh`                     |
 | `search.sh`             | `.mwpignore`-aware search — downloaded to `.mwp/search.sh`                      |
 | `context-scaffold.sh`   | `.mwp-context.md` stub writer — downloaded to `.mwp/context-scaffold.sh`        |
+| `upgrade.sh`            | Version checker — downloaded to `.mwp/upgrade.sh`                                |
 | `uninstall.sh`          | Removal script — downloaded to `.mwp/uninstall.sh`                              |
 | `protocol.md`           | Protocol instructions — downloaded to `.mwp/protocol.md`                        |
 

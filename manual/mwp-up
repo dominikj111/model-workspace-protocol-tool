@@ -92,6 +92,7 @@ concat-context.sh
 changes.sh
 search.sh
 context-scaffold.sh
+upgrade.sh
 mwp-verify.sh
 md-index.sh
 md-index.py
@@ -111,6 +112,7 @@ fetch_script "$BASE_URL/concat-context.sh"  ".mwp/concat-context.sh"
 fetch_script "$BASE_URL/search.sh"          ".mwp/search.sh"
 fetch_script "$BASE_URL/changes.sh"         ".mwp/changes.sh"
 fetch_script "$BASE_URL/context-scaffold.sh" ".mwp/context-scaffold.sh"
+fetch_script "$BASE_URL/upgrade.sh"         ".mwp/upgrade.sh"
 fetch_script "$BASE_URL/mwp-verify.sh"      ".mwp/mwp-verify.sh"
 fetch_script "$BASE_URL/md-index.sh"       ".mwp/md-index.sh"
 fetch_file   "$BASE_URL/md-index.py"       ".mwp/md-index.py"
