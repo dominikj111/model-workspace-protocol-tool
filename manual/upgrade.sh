@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BASE_URL="https://raw.githubusercontent.com/dominikj111/model-workspace-protocol-tool/main/manual"
+BASE_URL="https://raw.githubusercontent.com/dominikj111/model-workspace-protocol-tool/refs/heads/main/manual"
 
 info() { printf "  %s\n" "$1"; }
 fail() { printf "  ERROR: %s\n" "$1" >&2; exit 1; }
