@@ -14,7 +14,7 @@ cd "$_r" || exit 1
 
 # ── Recent commits ────────────────────────────────────────────────────────────
 echo "## Recent Commits"
-git log --oneline --stat -5 2>/dev/null || echo "(not a git repository)"
+git -c pager.log=false log --oneline --stat -5 2>/dev/null || echo "(not a git repository)"
 echo ""
 
 # ── Uncommitted changes ───────────────────────────────────────────────────────
