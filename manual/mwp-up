@@ -99,7 +99,7 @@ md-index.py
 uninstall.sh
 protocol.md
 cache/
-skill/
+skills/
 hooks/
 
 EOF
@@ -119,12 +119,14 @@ fetch_file   "$BASE_URL/md-index.py"       ".mwp/md-index.py"
 fetch_script "$BASE_URL/uninstall.sh"       ".mwp/uninstall.sh"
 
 # ── Skill and Hooks ───────────────────────────────────────────────────────────
-mkdir -p .mwp/skill
+mkdir -p .mwp/skills/mwp
+mkdir -p .mwp/skills/handoff
+mkdir -p .mwp/skills/mapping
 mkdir -p .mwp/hooks
 
-fetch_file "$BASE_URL/skill/SKILL.md"      ".mwp/skill/SKILL.md"
-fetch_file "$BASE_URL/skill/handoff.skill.md" ".mwp/skill/handoff.skill.md"
-fetch_file "$BASE_URL/skill/mapping.skill.md" ".mwp/skill/mapping.skill.md"
+fetch_file "$BASE_URL/skills/mwp/SKILL.md"      ".mwp/skills/mwp/SKILL.md"
+fetch_file "$BASE_URL/skills/handoff/SKILL.md" ".mwp/skills/handoff/SKILL.md"
+fetch_file "$BASE_URL/skills/mapping/SKILL.md" ".mwp/skills/mapping/SKILL.md"
 fetch_script "$BASE_URL/hooks/mwp-guard.sh" ".mwp/hooks/mwp-guard.sh"
 
 # ── Protocol ──────────────────────────────────────────────────────────────────
@@ -154,7 +156,7 @@ printf "\n"
 printf "\n"
 printf "  ${BOLD}AI/LLM Assistant Integration${NC}\n"
 printf "  MWP includes Agentic Skills and Hooks for automated workflows:\n"
-printf "  - ${CYAN}Skills${NC}: Check \`.mwp/skill/SKILL.md\` for agent instructions\n"
+printf "  - ${CYAN}Skills${NC}: Check \`.mwp/skills\` for agent instructions\n"
 printf "  - ${CYAN}Hooks${NC}: Integration point for tools like Crush (see \`.mwp/hooks/\`)\n"
 printf "\n"
 printf "\n"
