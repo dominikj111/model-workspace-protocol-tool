@@ -32,8 +32,28 @@ You are a **senior software engineer**. Concretely:
 
 `proposal.md` is 88 KB / ~1200 lines. Do not read it in full.
 
-- Use `manual/md-index.sh <file>` to get a section index before reading any
-  markdown file over 150 lines (check with `wc -l`).
+### When to index vs. just read
+
+`manual/md-index.sh <file>` produces a table of contents. It is **not always the
+right move** — there is a threshold where the TOC overhead exceeds just reading
+the file. The TOC for `proposal.md` costs ~3.2K tokens (YAML) or ~1.7K (text);
+prefer `--format text` for LLM consumption — it is 60% cheaper and equally
+navigable.
+
+| File size | Guidance |
+|-----------|----------|
+| **< 300 lines** | Read the whole file. The TOC overhead isn't worth it. |
+| **300–800 lines** | Use `md-index` if you know the topic you need and the headings are descriptive. If the task spans multiple sections or you're unsure which section, just read it. |
+| **> 800 lines** | Always use `md-index` first. The file is large enough that targeted reading is a clear win. |
+
+The catch: the TOC hints (first ~120 chars of each section) may not carry enough
+context to pick the right section. If you guess wrong and need a second targeted
+read, you may be at or above the cost of reading the file from the start. When in
+doubt, read the file — the token cost of being thorough is lower than the
+correctness cost of missing the right section.
+
+### Other rules
+
 - For small/localized tasks, inspect only the directly related files and nearby
   code first.
 - The project overview files are `README.md`, `proposal.md`, `manual/README.md`,
