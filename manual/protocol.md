@@ -1,10 +1,10 @@
 ---
-version: "0.2.0"
+version: "0.3.0"
 ---
 
 # Workspace Mapping Protocol
 
-**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.md files → Persistence rules → Five context layers.
+**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → navigate long files with `md-index.sh` → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.md files → Persistence rules → Five context layers.
 
 Both files live in `.mwp/`. `topology.md` is regenerable. `discoveries.md` is permanent, human-curated accumulation.
 
@@ -70,6 +70,25 @@ When the target is known, follow this sequence **before doing any work**:
    session will produce side effects.
 
 4. **Proceed** — context is now enriched from topology, discoveries, and the cascade.
+
+### Navigating long markdown files
+
+Use `bash .mwp/md-index.sh <file>` to get a section table of contents before
+reading large markdown files. Prefer `--format text` — it is ~60% cheaper in
+tokens than the default YAML output and equally navigable.
+
+It is **not always the right move** — there is a threshold where the TOC overhead
+exceeds just reading the file:
+
+| File size | Guidance |
+|-----------|----------|
+| **< 300 lines** | Read the whole file. The TOC overhead isn't worth it. |
+| **300–800 lines** | Use `md-index` if you know the topic you need. Otherwise, just read it. |
+| **> 800 lines** | Always use `md-index` first. Targeted reading is a clear win. |
+
+The TOC hints (first ~120 chars of each section) may not carry enough context to
+pick the right section. If you guess wrong and need a second targeted read, you
+may be at or above the cost of reading the file from the start.
 
 ---
 
