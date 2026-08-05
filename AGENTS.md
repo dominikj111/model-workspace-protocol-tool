@@ -34,6 +34,9 @@ You are a **senior software engineer**. Concretely:
 
 ### When to index vs. just read
 
+**First, check the file size:** `wc -l <file>` (cheap — one command, one number).
+Then apply:
+
 `manual/md-index.sh <file>` produces a table of contents. It is **not always the
 right move** — there is a threshold where the TOC overhead exceeds just reading
 the file. The TOC for `proposal.md` costs ~3.2K tokens (YAML) or ~1.7K (text);

@@ -73,6 +73,9 @@ When the target is known, follow this sequence **before doing any work**:
 
 ### Navigating long markdown files
 
+**First, check the file size:** `wc -l <file>` (cheap — one command, one number).
+Then apply:
+
 Use `bash .mwp/md-index.sh <file>` to get a section table of contents before
 reading large markdown files. Prefer `--format text` — it is ~60% cheaper in
 tokens than the default YAML output and equally navigable.

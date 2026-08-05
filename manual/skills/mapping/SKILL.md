@@ -11,6 +11,9 @@ the TOC overhead exceeds just reading the file.
 
 ## When to use
 
+**First, check the file size** with `wc -l <file>` (cheap — one command, one number).
+Then apply:
+
 | File size | Guidance |
 |-----------|----------|
 | **< 300 lines** | Skip md-index. Read the whole file. |
