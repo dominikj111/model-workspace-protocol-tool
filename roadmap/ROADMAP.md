@@ -29,6 +29,18 @@ is already YAML; the body just moves to a key), so the cost is low.
 
 ---
 
+| ID  | Story                                                 | Status | Handoff |
+| --- | ----------------------------------------------------- | ------ | ------- |
+| 00a | Agent Skills: make discoverable by pi.dev/harnesses    | ⬜      | [handoff](handoffs/02-skills-discovery.md) |
+
+**Goal:** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
+`.mwp/skills/`, but neither path is in pi.dev's discovery list. Move installation
+to `.agents/skills/mwp/` (standard project skill location), add cwd-assumption note
+to skill files, and optionally namespace the names (`mwp-core`, `mwp-handoff`,
+`mwp-mapping`).
+
+---
+
 ## Phase 1 — Minimum useful mapper (proposal §10)
 
 **Goal:** Rust CLI that turns a folder tree into a rendered Markdown workspace map.
