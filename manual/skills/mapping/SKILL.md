@@ -1,25 +1,38 @@
 ---
 name: mapping
-description: Use to index large Markdown files before reading them to identify relevant sections.
+description: Use to index large Markdown files when targeted reading saves tokens over reading the full file.
 ---
 
 # Markdown Mapping Skill
 
-When dealing with large Markdown files, use `md-index.sh` to map the structure before performing a full read. This saves tokens and provides immediate orientation.
+Use `md-index.sh` to map the structure of large Markdown files **before deciding
+how to read them.** It is not always the right move — there is a threshold where
+the TOC overhead exceeds just reading the file.
+
+## When to use
+
+| File size | Guidance |
+|-----------|----------|
+| **< 300 lines** | Skip md-index. Read the whole file. |
+| **300–800 lines** | Use md-index only if you have a specific topic in mind. |
+| **> 800 lines** | Always use md-index first. |
 
 ## 🚀 Procedure
 
-1.  **Index the file**: Run `bash .mwp/md-index.sh <path-to-markdown-file>`.
-    *   This outputs a YAML index of headers, line numbers, and content hints.
-2.  **Identify Targets**: Review the index to find the specific sections or line ranges related to your task.
-3.  **Selective Read**: Use `view` (with `offset` and `limit`) or `sed` to read only the identified sections.
+1.  **Index the file** (prefer `--format text` for LLM consumption — ~60% fewer tokens):
+    ```bash
+    bash .mwp/md-index.sh <file> --format text
+    ```
+2.  **Identify the relevant sections** from the TOC. Check the `end` line —
+    that is where the next section begins. Read from `start` to `end`.
+3.  **If unsure which section you need**, skip the TOC and read the file
+directly. The cost of guessing wrong and reading a second section can exceed
+reading the full file from the start.
 
-## 🛠️ Usage Examples
+## 🛠️ Reference
 
 ```bash
-# Get a YAML index (default)
-bash .mwp/md-index.sh documents/large-spec.md
-
-# Get a JSON index
-bash .mwp/md-index.sh documents/large-spec.md --format json
+bash .mwp/md-index.sh <file>                 # YAML (machine-readable)
+bash .mwp/md-index.sh <file> --format text   # Compact (prefer for LLM)
+bash .mwp/md-index.sh <file> --format json   # JSON
 ```
