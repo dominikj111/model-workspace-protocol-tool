@@ -1,8 +1,31 @@
-# Handoff: Make MWP skills discoverable by pi.dev (and other agent harnesses)
+# Handoff: Make MWP skills discoverable by all agent harnesses
 
-**Story ID:** — (not yet in roadmap)  
+**Story ID:** 00a  
 **Status:** ⬜ backlog  
-**Depends on:** nothing
+**Depends on:** nothing  
+**Goal:** MWP skills must work in pi.dev, Claude Code, OpenCode, OpenClaude,
+and any other harness that follows the Agent Skills standard.
+
+---
+
+## Context — the cross-tool landscape
+
+The [Agent Skills standard](https://agentskills.io/specification) defines a
+common format (directory + `SKILL.md` + frontmatter) but discovery paths are
+tool-specific. The standard recommends `.agents/skills/` as the shared
+project-level location. Adoption varies:
+
+| Tool | Native skill paths | Notes |
+|------|-------------------|-------|
+| **pi.dev** | `.pi/skills/`, `.agents/skills/`, `~/.pi/agent/skills/`, `~/.agents/skills/` | `.agents/skills/` works natively ✅ |
+| **Claude Code** | `.claude/skills/` | Also accepts config: `"skills"` in settings |
+| **OpenCode** | Unknown (likely `.agents/skills/` or config-based) | TBD during implementation |
+| **OpenClaude** | Unknown | TBD during implementation |
+| **Other stdlib harnesses** | `.agents/skills/` (per standard) | Goal: zero-config for any compliant tool |
+
+**Strategy:** Install to `.agents/skills/mwp/` as the single source of truth. For
+tools that don't scan it natively, `mwp-up` prints a one-time config snippet. No
+symlinks, no duplication — one canonical location, documented per-tool bridges.
 
 ---
 
@@ -17,25 +40,22 @@ manual/skills/
 └── mwp/SKILL.md        # workspace mapping protocol
 ```
 
-`mwp-up` installs them into `.mwp/skills/`. They follow the [Agent Skills
-standard](https://agentskills.io/specification) structurally (directory +
-`SKILL.md` + valid frontmatter), but they are **not functional in practice**
-for three reasons:
+`mwp-up` installs them into `.mwp/skills/`. They follow the Agent Skills
+standard structurally (directory + `SKILL.md` + valid frontmatter), but they
+are **not functional in any harness** for three reasons:
 
-### 1. Wrong discovery path
+### 1. Wrong discovery path for every tool
 
-pi.dev scans specific locations for skills: `.pi/skills/`, `.agents/skills/`,
-`~/.pi/agent/skills/`, `~/.agents/skills/`. `.mwp/skills/` is not one of them.
-The skills are installed but never loaded.
+`.mwp/skills/` is not in any tool's scan list. No harness discovers them. The
+single canonical install target should be `.agents/skills/mwp/` — the
+cross-tool location recommended by the Agent Skills standard.
 
 ### 2. Path references are fragile
 
 The skills use project-root-relative paths (`bash .mwp/changes.sh`). This works
-when the agent's cwd is the project root, but the Agent Skills spec says
-relative paths resolve from the skill directory. If the skill lives at
-`.mwp/skills/mwp/SKILL.md`, the correct relative path to `.mwp/changes.sh` would
-be `../../changes.sh`. In practice this usually works because agent harnesses
-run with cwd = project root, but it is not guaranteed by the spec.
+when the agent's cwd is the project root, but the spec says relative paths
+resolve from the skill directory. In practice this usually works because most
+harnesses set cwd = project root, but it is not guaranteed.
 
 ### 3. Generic names risk collision
 
@@ -45,57 +65,58 @@ skills from multiple sources, collisions are plausible. Better: `mwp-core`,
 
 ---
 
-## What needs to happen
+## Fixes
 
-### Fix A — Discovery path (required)
+### Fix A — Single install target, per-tool bridges (required)
 
-The skills must land in a directory pi.dev actually scans. Options:
+Install skills to `.agents/skills/mwp/`. This is the Agent Skills standard's
+recommended shared location and works natively in pi.dev.
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| Install to `.agents/skills/mwp/` directly | Zero config for users | Pollutes a generic directory with MWP-specific content |
-| Symlink `.agents/skills/mwp` → `.mwp/skills` | Skills stay with MWP artifacts | Symlink maintenance; Windows unfriendly |
-| Print pi.dev config snippet at install | Explicit, user-controlled | Extra manual step |
-| Install to `.mwp/skills/` + add `"skills"` entry to `.pi/settings.json` | Automated | Touching another tool's config is invasive |
+For tools that don't scan `.agents/skills/` natively, `mwp-up` prints a
+post-install snippet:
 
-**Recommendation:** Install to `.agents/skills/mwp/` directly. It's the
-simplest path, zero-config, and `.agents/skills/` is explicitly designed as a
-shared skill location for project-level agent tools. The MWP skills belong
-alongside other project agent skills.
+```
+  Skills installed to .agents/skills/mwp/
 
-Update `mwp-up`:
+  Skill discovery:
+    pi.dev             ✅ works natively
+    Claude Code         → add this to .claude/settings.json:
+                          { "skills": [".agents/skills"] }
+    OpenCode            → (check docs; likely same as above)
+    OpenClaude          → (check docs; likely same as above)
+```
+
+No symlinks, no duplication. One canonical location; documented bridges.
+
+Changes to `mwp-up`:
 - Change `mkdir -p .mwp/skills/mwp` → `mkdir -p .agents/skills/mwp`
 - Change all `fetch_file "$BASE_URL/skills/..." ".mwp/skills/..."` → `.agents/skills/mwp/...`
-- Flatten the structure: `mwp/SKILL.md`, `handoff/SKILL.md`, `mapping/SKILL.md` all live directly in `.agents/skills/mwp/SUBDIR/SKILL.md`
-- Update `.mwp/.gitignore` to reference the new path
+- Update `.mwp/.gitignore` to reference new path
+- Add per-tool config snippet to post-install message
+- Handle migration: if `.mwp/skills/` exists from a prior install, move content
+to `.agents/skills/mwp/` and warn about the old directory
 
-### Fix B — Path references (recommended)
+### Fix B — Document cwd assumption (recommended)
 
-The skill scripts reference `.mwp/<script>` from project root. Two approaches:
+Add a note to each SKILL.md:
 
-1. **Switch to absolute-from-project-root notation.** Document that skills assume
-   cwd = project root (which is true for pi.dev, Claude Code, and most harnesses).
-   Add a note at the top of each skill: `<!-- Assumes cwd = project root -->`.
-   This is the pragmatic choice — it works everywhere that matters.
+```markdown
+<!-- Assumes cwd = project root (standard for pi.dev, Claude Code, and most harnesses). -->
+```
 
-2. **Switch to skill-directory-relative paths.** Change `bash .mwp/changes.sh` to
-   `bash ../../changes.sh` (if skill is at `.agents/skills/mwp/mwp/SKILL.md` and
-   scripts are in `.mwp/`). This is spec-compliant but fragile — if the install
-   location changes, paths break. Also makes the skill harder to read (what is
-   `../../`?).
-
-**Recommendation:** Option 1. Add a one-line assumption note to each SKILL.md.
-This is how most real-world skills work in practice — they assume cwd.
+This is the pragmatic choice. Switching to skill-directory-relative paths
+(`../../changes.sh`) is spec-compliant but fragile — if the install location
+changes, paths break. Most real-world skills in the ecosystem assume cwd.
 
 ### Fix C — Namespace names (nice-to-have)
 
-Rename:
+Rename in each SKILL.md frontmatter:
 - `mwp` → `mwp-core`
 - `handoff` → `mwp-handoff`
 - `mapping` → `mwp-mapping`
 
-Update the `name:` field in each SKILL.md frontmatter. Directory names should
-match (pi.dev doesn't enforce this but it's good practice).
+Directory names should match (pi.dev doesn't enforce this, but the standard
+does, and matching avoids confusion).
 
 ---
 
@@ -103,24 +124,26 @@ match (pi.dev doesn't enforce this but it's good practice).
 
 | File | Change |
 |------|--------|
-| `manual/mwp-up` | Install skills to `.agents/skills/mwp/` instead of `.mwp/skills/`. Update `.gitignore` template. Update post-install message. |
-| `manual/skills/mwp/SKILL.md` | Add cwd assumption note. Optionally rename to `mwp-core`. |
-| `manual/skills/handoff/SKILL.md` | Add cwd assumption note. Optionally rename to `mwp-handoff`. |
-| `manual/skills/mapping/SKILL.md` | Add cwd assumption note. Optionally rename to `mwp-mapping`. |
-| `manual/uninstall.sh` | Also clean `.agents/skills/mwp/` if present. |
+| `manual/mwp-up` | Install to `.agents/skills/mwp/`. Update `.gitignore` template. Add per-tool config snippet to post-install message. Handle migration from `.mwp/skills/`. |
+| `manual/skills/mwp/SKILL.md` | Add cwd assumption note. Rename `name:` to `mwp-core`. |
+| `manual/skills/handoff/SKILL.md` | Add cwd assumption note. Rename `name:` to `mwp-handoff`. |
+| `manual/skills/mapping/SKILL.md` | Add cwd assumption note. Rename `name:` to `mwp-mapping`. |
+| `manual/uninstall.sh` | Also clean `.agents/skills/mwp/` and stale `.mwp/skills/` if present. |
 | `manual/protocol.md` | Update Agentic Skills & Hooks section to reference `.agents/skills/mwp/`. |
 | `AGENTS.md` | Update skill paths in §6 (Commands) and §7 (Layout). |
 | `manual/README.md` | Update any skill path references. |
-| `manual/hooks/mwp-guard.sh` | Check if hook path references need updating. |
 
 ---
 
 ## Verification
 
 - [ ] `mwp-up` on a clean project creates `.agents/skills/mwp/` with all three skills
-- [ ] `pi.dev` launched in the project discovers and lists `mwp`, `handoff`, `mapping` skills
-- [ ] `/skill:mwp` loads the workspace mapping protocol instructions
-- [ ] `mwp-up` on a project with existing `.mwp/skills/` migrates cleanly (or warns)
-- [ ] `uninstall.sh` removes `.agents/skills/mwp/`
+- [ ] `pi.dev` launched in the project discovers and lists the skills natively
+- [ ] `/skill:mwp-core` loads the workspace mapping protocol instructions
+- [ ] Claude Code with `"skills": [".agents/skills"]` in settings discovers them
+- [ ] OpenCode / OpenClaude: at minimum, documented how to bridge (test if possible)
+- [ ] `mwp-up` on a project with existing `.mwp/skills/` migrates cleanly (moves + warns)
+- [ ] `uninstall.sh` removes `.agents/skills/mwp/` and stale `.mwp/skills/`
 - [ ] `.mwp/.gitignore` reflects the new paths
-- [ ] All docs reference `.agents/skills/mwp/` not `.mwp/skills/`
+- [ ] All docs reference `.agents/skills/mwp/`, not `.mwp/skills/`
+- [ ] Post-install message shows correct per-tool config for the current tool landscape
