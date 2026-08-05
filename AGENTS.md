@@ -60,8 +60,8 @@ correctness cost of missing the right section.
 - For small/localized tasks, inspect only the directly related files and nearby
   code first.
 - The project overview files are `README.md`, `proposal.md`, `manual/README.md`,
-  and `manual/protocol.md`. Read them only for broad onboarding, architecture
-  questions, or tasks that span multiple areas.
+  `manual/protocol.md`, and `docs/format-spec.md`. Read them only for broad
+  onboarding, architecture questions, or tasks that span multiple areas.
 - When citing the proposal, be precise: section (§N) — never paste whole sections.
 - When in doubt, read the proposal: token cost is a preference, not a correctness
   constraint.
@@ -158,6 +158,8 @@ mwp/
 ├── CONTRIBUTING.md           # contribution guidelines
 ├── LICENSE / NOTICE          # Apache 2.0
 ├── .github/                  # GitHub templates
+├── docs/                     # extracted references
+│   └── format-spec.md        # normative format extraction from proposal
 ├── manual/                   # lightweight shell-script implementation
 │   ├── README.md             # manual implementation guide
 │   ├── protocol.md           # MWP protocol specification (condensed)

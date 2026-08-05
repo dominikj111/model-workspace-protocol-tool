@@ -32,12 +32,20 @@ is already YAML; the body just moves to a key), so the cost is low.
 | ID  | Story                                                 | Status | Handoff |
 | --- | ----------------------------------------------------- | ------ | ------- |
 | 00a | Agent Skills: make discoverable by pi.dev/harnesses    | ⬜      | [handoff](handoffs/02-skills-discovery.md) |
+| 00b | Extract format spec from proposal (`docs/format-spec.md`)  | ⬜      | — |
 
-**Goal:** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
-`.mwp/skills/`, but neither path is in pi.dev's discovery list. Move installation
-to `.agents/skills/mwp/` (standard project skill location), add cwd-assumption note
-to skill files, and optionally namespace the names (`mwp-core`, `mwp-handoff`,
-`mwp-mapping`).
+**Goal (00a):** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
+`.mwp/skills/`, but neither path is in any harness's discovery list. Move installation
+to `.agents/skills/mwp/` (standard cross-tool location), add cwd-assumption notes
+to skill files, namespace names (`mwp-core`, `mwp-handoff`, `mwp-mapping`), and
+document per-tool bridges in the post-install message.
+
+**Goal (00b):** Extract normative format definitions, algorithms, and schemas
+from the proposal into `docs/format-spec.md`. ~300 lines, no rationale — just
+the implementation contract. States up front that the proposal is authoritative.
+This is the quick-reference for manual script authors and the eventual Rust
+developer. Will need a refresh pass after story 00 (`.mwp-context.yaml`
+migration changes the context file format).
 
 ---
 
