@@ -9,13 +9,13 @@ references), §8 (IR), §9 (CLI surface), §10 (phases).
 
 ---
 
-## Anchor (`.mwp`) — TOML — proposal §5.1
+## Anchor (`.mwp/` namespace; `config.toml`) — TOML — proposal §5.1
 
 The project root marker. Discovered by walking up from the target until found.
 Fallback: `.git/`, then `--root` flag.
 
 ```toml
-# .mwp  (workspace root)
+# .mwp/config.toml  (workspace root)
 name        = "myproject"
 description = "Polyglot monorepo — Rust engine, TS backend, ViteJS frontend"
 
@@ -28,7 +28,7 @@ l2 = 500
 l3 = 2000
 
 [trust]
-allowed_guards = ["cargo test", "npm run typecheck", "pnpm typecheck"]
+allowed_guards = ["npm run typecheck", "./scripts/verify.sh"]
 
 [directories]
 "engine"             = { role = "Rust processing core",           stack = ["rust"] }
@@ -40,9 +40,9 @@ allowed_guards = ["cargo test", "npm run typecheck", "pnpm typecheck"]
 window = 0   # 0 = full cascade; positive integer caps ancestor levels
 ```
 
-**Sub-project root** (member with its own `.mwp`): minimal — `name`, `description`.
+**Sub-project root** (member with its own `.mwp/` containing a minimal `config.toml`): `name`, `description`.
 No `members`, no `directories`. `workspace:` imports resolve against the workspace
-root (nearest ancestor `.mwp` with `members`).
+root (nearest ancestor `.mwp/` whose `config.toml` declares `members`).
 
 **`directories` table:** Role descriptions for the L0 topology overview. `stack`
 tags are open-ended hints for community module suggestions. `shared = true` signals
@@ -81,7 +81,7 @@ imports:                # additional references spliced at this layer
   - workspace: packages/shared-types
   - git: https://github.com/mwp-community/rust-idiomatic.git@v2.1.0
 guards:                 # verified-reference checks (§7)
-  - cmd: cargo test --lib
+  - cmd: npm run typecheck
     cache_for: 10m
     trust: project
 verified_paths:         # files whose change invalidates guard cache
@@ -178,18 +178,18 @@ Three kinds, distinct resolution rules:
 | Kind | Path anchor | Use for |
 |------|------------|---------|
 | `local:` | Declaring file's directory | Files within the same sub-project |
-| `workspace:` | `.mwp` directory (workspace root) | Sibling sub-projects in a monorepo |
+| `workspace:` | `.mwp/` (workspace root) | Sibling sub-projects in a monorepo |
 | `git:` | Fetched into `.mwp/modules/<sha>/` | External community modules |
 
 **`local:` rules:**
 - `./rules.md` — same directory (✓)
 - `./skills/rust.md` — subdirectory (✓)
-- `./node_modules/@org/mwp-base` — subdirectory, installed package (✓)
+- `./vendor/mwp-conventions` — subdirectory, checked-out module (✓)
 - `../shared.md` — rejected (ancestor context arrives via cascade)
 - `/abs/path` — rejected (no absolute paths)
 
 **`workspace:` rules:**
-- Path relative to the workspace root `.mwp`, not the declaring file.
+- Path relative to the workspace root (`.mwp/`), not the declaring file.
 - Must resolve within the workspace root (no escaping).
 - When the sub-project runs standalone (no parent workspace), unresolvable
   `workspace:` imports are warnings, not errors.
@@ -275,7 +275,7 @@ before beginning work — load-bearing for the two-phase model.
 
 ```yaml
 guards:
-  - cmd: cargo test --lib
+  - cmd: npm run typecheck
     cache_for: 10m
     trust: project
 ```
@@ -292,15 +292,15 @@ guards:
 
 | Level | Scope | Approval |
 |-------|-------|----------|
-| `builtin` | `cargo test`, `npm run <script>`, `pnpm <script>`, `pytest`, `cargo clippy` | Always allowed |
-| `project` | Listed in `.mwp` `trust.allowed_guards` | Allowed without prompt |
+| `builtin` | `npm run <script>`, executable-path patterns like `./scripts/check.sh` | Always allowed |
+| `project` | Listed in `.mwp/config.toml` `trust.allowed_guards` | Allowed without prompt |
 | `ad-hoc` | Anything else | CLI prompts on first run; MCP server refuses |
 
 ### Guard result
 
 ```json
 {
-  "guard": "cargo test --lib",
+  "guard": "npm run typecheck",
   "status": "passed",
   "exit_code": 0,
   "duration_ms": 3421,

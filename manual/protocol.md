@@ -175,7 +175,7 @@ The map is terrain, not work history. Source code and git history cover the work
 
 L0–L1 applies everywhere. L2–L4 applies within its directory scope and all children.
 More specific (closer to target) overrides less specific when they conflict.
-`.mwp-context.md` at a directory boundary (where `.mwp` exists) stops upward traversal.
+`.mwp-context.md` at a directory boundary (where `.mwp/` exists) stops upward traversal.
 
 ---
 
@@ -183,14 +183,13 @@ More specific (closer to target) overrides less specific when they conflict.
 
 **Skills and Hooks** are manual-implementation extensions that automate MWP compliance for agentic sessions. They use `.mwp/skills/` and `.mwp/hooks/` to bridge the gap between static docs and active enforcement.
 
-**`topology.md` and `discoveries.md`** are pre-tool scaffolding introduced by this manual
-implementation. When mwp-tool ships, `topology.md` is replaced by the tool's deterministic
-map output. `discoveries.md` has no direct equivalent — it represents human-accumulated
-findings that the tool cannot derive automatically.
+**`topology.md` and `discoveries.md`** are committed project data introduced by this manual
+implementation, and they stay committed in `.mwp/` when the tool ships (proposal §5.4). What
+changes is the generator: `topology.md` is produced by the tool's deterministic map output
+instead of `bootstrap.sh`. `discoveries.md` remains human-accumulated findings that the tool
+cannot derive automatically.
 
 **Community modules** (`imports: [git: ...]` in .mwp-context.md frontmatter) are a mwp-tool
 feature. They are not available in this manual implementation.
 
-**`.mwp/` is a directory here.** The future mwp-tool uses `.mwp` as a TOML
-config file (similar to `Cargo.toml`), with `.mwp/` as local storage. When the tool
-ships, auto-migration will handle the transition.
+**`.mwp/` is the anchor — a directory, not a file.** The manual and the future mwp-tool agree here (proposal §5.1, §5.4): a project is rooted at a `.mwp/` directory whose presence marks the cascade boundary (see "Five context layers"). The anchor config lives at `.mwp/config.toml` (`name`, `members`, `budgets`, `trust`, `directories`, `render` window) — there is no bare `.mwp` file. The directory is a single namespace for everything: committed project data (`topology.md`, `discoveries.md`, skills, hooks, scripts, `intents/`, `pipelines/`) plus generated map and module caches. The manual's shell scripts are superseded by CLI commands (`bootstrap.sh` → `mwp init`, `concat-context.sh` → `mwp map`, `mwp-verify.sh` → `mwp verify`); data carries over. Auto-migration handles the transition.
