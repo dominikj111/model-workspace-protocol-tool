@@ -2,8 +2,9 @@
 
 A comprehensive proposal for a deterministic workspace mapper, with a later MCP wrapper for direct LLM use.
 
-- **Version:** 0.1
+- **Version:** 0.2
 - **Status:** Foundational proposal
+- **Changelog:** 0.2 — interpolation & template materialization (§5.6–§5.7, Phase 6).
 - **Authors / origin:** Dominik Jelinek, based on his blog post *"Your Folder Tree Is Already a Context Engine"* and the ICM-MWP paper notes (arXiv:2603.16021v1, Van Clief & McDermott, 2026)
 - **Implementation target:** Rust CLI first, MCP server later (same binary)
 - **Audience:** the author, future contributors, and any LLM that needs to understand what we are building and why
@@ -43,7 +44,7 @@ This proposal adds two things that Van Clief's original approach does not specif
 
 It is not a prompt framework, not an agent runtime, not a vector store, not a content extractor. It is a **workspace mapper**. Once the mapper is stable, it will be exposed through a thin MCP server so any MCP-aware LLM client (Claude Code, Claude Desktop, Cursor) can ask for the map for the current file and get the same deterministic artifact.
 
-The non-obvious commitment: **the human stays the author of context.** The tool assembles and verifies; it never invents, never summarizes via LLM, never decides what your project means. Everything in the map traces to a file you wrote, an import you declared, or a verification you authorized.
+The non-obvious commitment: **the human stays the author of context.** The tool assembles and verifies; it never invents, never summarizes via LLM, never decides what your project means. Everything in the map traces to a file you wrote, an import you declared, or a verification you authorized. Interpolation (§5.6) changes nothing here: the tool fills human-authored placeholders with human-authored values; it still invents nothing.
 
 ---
 
@@ -128,7 +129,7 @@ To keep scope honest, the following are explicitly out:
 - **Vector search / RAG / embeddings** as a primary resolution mechanism. Resolution is path-based and explainable.
 - **LLM-generated context.** The tool never asks an LLM to summarize, infer, or rewrite your context files.
 - **Agent orchestration.** No scheduling, no inter-agent messaging, no autonomous loops.
-- **A new prompt-engineering DSL.** Frontmatter + Markdown. Nothing else.
+- **A new prompt-engineering DSL.** Frontmatter + Markdown. Nothing else. The sole exception is placeholder substitution — `{{name}}` → value, verbatim, no conditionals, no expressions (§5.6). The carve-out is explicit and bounded: if the syntax ever needs more than substitution, this non-goal re-engages.
 - **Any package manager, anywhere in the pipeline.** No npm, Cargo, pip, Go modules, or composer — not even for `local:` imports. A module is a directory containing a `.mwp-module.md` manifest; whether it arrived via `git:` fetch or by being checked out into the tree, the mapper reads the manifest and nothing else. It never inspects `package.json`, `Cargo.toml`, or any equivalent, and never drives an install step.
 - **A package registry of our own.** No npm-style registry service and no hosting infrastructure to operate. Distribution is plain Git URLs with pinned refs, indexed by a curated, static registry index (Homebrew-style names directory, §13) served from a Git repo. npm interop may be added later as an optional convenience channel — and nothing else.
 - **Workflow enforcement.** The tool does not enforce how users interact with the produced map. Van Clief's staged pipeline pattern — `intent.md` → LLM processes → `output.md` → human review → next stage — is a valuable complement and is recommended, but it is user-managed. A project that adopts this discipline documents it in `.mwp-context.md`; the LLM, once oriented by the map, will naturally offer and guide the pattern. The tool has no mechanism to enforce it and deliberately avoids acquiring one.
@@ -356,6 +357,7 @@ verified_paths:             # files whose change invalidates guard cache (defaul
 owners:                     # who is responsible for keeping this context accurate
   - team-backend
 priority: 80                # tiebreaker within the same layer (default 50)
+interpolate: true           # optional: resolve {{name}} placeholders from the variable set (§5.6)
 ---
 
 # Purpose
@@ -528,7 +530,7 @@ Stack modules are the answer:
 
 The connection to folder topology: when `.mwp/config.toml` declares `"packages/frontend" = { stack = ["nextjs"] }`, the mapper can surface a suggestion that `mwp-stack-nextjs` is a natural import for that directory's .mwp-context.md. The suggestion is advisory — the import is explicit in the .mwp-context.md, never injected automatically. A monorepo with a Next.js frontend and a Django backend imports each stack module at the right directory level; nothing bleeds across the boundary.
 
-This is where the module ecosystem becomes qualitatively different from a collection of shared snippets. A practitioner who has worked deeply with Django REST framework encodes their knowledge once, publishes `mwp-stack-django`, and every project that imports it gets that perspective without the project author needing to rediscover the same patterns. The stack becomes the distribution unit for domain expertise.
+This is where the module ecosystem becomes qualitatively different from a collection of shared snippets. A practitioner who has worked deeply with Django REST framework encodes their knowledge once, publishes `mwp-stack-django`, and every project that imports it gets that perspective without the project author needing to rediscover the same patterns. The stack becomes the distribution unit for domain expertise. With variables (§5.6), a stack module can also be a template: it ships `{{crate_name}}`, `{{api_base_path}}`-style placeholders, and each consuming project injects its own values at map time — the module stays generic, the map comes out specific.
 
 #### What a well-formed community module contains
 
@@ -596,6 +598,7 @@ The `.mwp/` directory is the anchor namespace: the anchor config and all project
 - All `.mwp-context.md` files throughout the project tree — they encode the team's accumulated understanding and are as valuable as the code itself.
 - `.mwp/topology.md` and `.mwp/discoveries.md` — project-specific maps built and refined over time.
 - `.mwp/skills/`, `.mwp/hooks/`, `.mwp/scripts/` — human-authored agentic skills, hooks, and project scripts. The CLI generates what it can (topology, caches); these cannot be derived — they are first-class project data, committed like the context files.
+- `.mwp/vars.toml` — committed: team-wide variables for template interpolation (§5.6). Its per-user counterpart, `.mwp/vars.local.toml`, is deliberately gitignored (below).
 - `.mwp/.gitignore` itself.
 - `.mwp/intents/` — **suggested, not required** — active task intent files (Workflow B). One file per current task, written before the LLM begins work. The mapper scans this directory and includes any intent files in the workspace map when present. See §5.5.
 - `.mwp/pipelines/` — **suggested, not required** — promoted, repeatable workflows (Workflow B). When a one-off intent proves worth repeating, the user moves or copies it here as a named pipeline template. The mapper scans this directory and surfaces available pipelines in the orientation map. See §5.5.
@@ -608,6 +611,7 @@ modules/
 cache/
 guards.cache.json
 sessions/
+vars.local.toml   # private per-user variables (§5.6)
 *.sh
 protocol.md
 ```
@@ -615,6 +619,9 @@ protocol.md
 ```text
 .mwp/
 ├── config.toml                # committed: anchor — name, members, budgets, trust, directories, render
+├── vars.toml                  # committed: team-wide interpolation variables (§5.6)
+├── vars.local.toml            # gitignored: private per-user interpolation variables (§5.6)
+├── templates/                 # committed (suggested): materialization templates (§5.7)
 ├── .gitignore                 # tracks what to keep vs. ignore in this directory
 ├── topology.md                # committed: workspace map generated by the tool
 ├── discoveries.md             # committed: session findings and decisions
@@ -643,7 +650,7 @@ protocol.md
 
 #### Map cache key
 
-The cache key for a given target is the SHA-256 of: the target path (normalized, relative to root) concatenated with the content of every file that contributed to the map — the cascade chain plus any resolved local imports. Pinned git modules are hashed once on fetch and their hash is stored alongside the module; subsequent map builds include the stored hash without re-reading the module files.
+The cache key for a given target is the SHA-256 of: the target path (normalized, relative to root) concatenated with the content of every file that contributed to the map — the cascade chain plus any resolved local imports — plus a canonical serialisation of the resolved variable set (§5.6). Interpolation values are inputs to the map: a change in `vars.toml`, `vars.local.toml`, `MWP_VAR_*`, or `--var` invalidates the cache exactly as a changed context file would. Pinned git modules are hashed once on fetch and their hash is stored alongside the module; subsequent map builds include the stored hash without re-reading the module files.
 
 Computing the key requires the cascade traversal (to know which files contribute), but traversal is cheap: it is stat calls and path arithmetic. What the cache skips is frontmatter parsing, import graph resolution, layer assignment, budget enforcement, and rendering. On a warm cache, `mwp map` and the MCP `map_workspace` tool are near-instant.
 
@@ -711,6 +718,84 @@ File content is **not** loaded into the map automatically. The LLM reads the nam
 
 ---
 
+### 5.6 Variables and interpolation
+
+A context body may contain placeholders — `{{name}}` — that the mapper substitutes at map time from a **variable set**. One template, many instantiations: a shared, committed template plus per-user, per-environment, or per-project values. The values are human-authored — a variables file, an environment variable, or a CLI argument. Interpolation never invents (§3.4); it fills in what someone wrote, verbatim.
+
+**Why this exists.** Without it, "same project template, different guidelines" means duplicating context files per developer or per environment and letting them drift. With it, one `.mwp-context.md` template is committed; each developer's private guidelines — tooling preferences, review style, employer-specific rules — live in a gitignored local variables file; the map each developer gets is the same template assembled with their own values, and nothing private ever reaches git. The same mechanism lets a community **stack module** (§5.3) ship as a template: generic rules with `{{crate_name}}`-style placeholders, injected at map time by each consuming project. The module stays generic; the map comes out specific.
+
+**Placeholder syntax.** `{{name}}`, where `name` is `[a-z0-9_-]+`. The value replaces the placeholder verbatim. That is the entire syntax — no conditionals, no loops, no expressions, no filters, no defaults. Interpolation is substitution, not a template language; the "no DSL" non-goal (§2) stays intact by explicit carve-out.
+
+**Opt-in per file.** A context file is interpolated only when its frontmatter declares `interpolate: true` — a new field under the extension-interface principle (§3.9). This keeps ordinary documentation inert: a Vue or Nunjucks code sample containing `{{count}}` in a non-interpolating file is untouched. Within an interpolating file, a literal placeholder is written `\{{name}}` — the escaped opening brace renders as a literal `{{` and is not substituted.
+
+**Value sources**, in precedence order (highest first):
+
+| Source | Form | Committed? | Typical use |
+| --- | --- | --- | --- |
+| Explicit | `mwp map --var key=value` (repeatable) | — | one-off overrides, CI |
+| Environment | `MWP_VAR_<NAME>` (suffix lowercased) | — | CI-injected or shell-profile values |
+| Local | `.mwp/vars.local.toml` | no — gitignored | private, per-user values |
+| Shared | `.mwp/vars.toml` | yes | team-wide variables, project paths |
+
+Closest to the invocation wins: `--var` beats `MWP_VAR_*` beats `vars.local.toml` beats `vars.toml`. Within one source, duplicate keys are a `mwp lint` error — never a last-wins merge. The resolved set is an input to the map, so determinism (§3.1) holds: same tree + same resolved set → same map. Values are plain strings — a word, a sentence, a paragraph, a path. Multiline values (TOML triple-quoted strings) are inserted verbatim. Numbers and lists are rejected with a clear error, so nothing type-shaped can surprise a later phase.
+
+**Where interpolation applies.** Every context body that contributes to the map: `.mwp-context.md` cascade files, `local:` / `workspace:` imports, and module content — always resolved against the **consuming project's** variable set, never the module's. Interpolation is body-only: frontmatter is not interpolated (layers and budgets are computed from real values), `config.toml` is not interpolated, and the `.mwp-module.md` manifest is not interpolated (import resolution must stay stable and cycle-detectable).
+
+**Unresolved placeholders are an error.** `mwp map` fails, naming the file and the placeholder; `mwp lint` reports it. A map is never emitted containing a literal `{{...}}` — the same policy as budget overruns (§3.3): an error the user resolves, not a silently degraded artifact.
+
+**Budgets count post-substitution.** Token caps apply to the interpolated body, so an injected paragraph counts against its layer's budget; an overrun is reported per layer, never silently truncated.
+
+**Trace.** Every substitution is recorded in the IR trace: `{ placeholder, source_file, value_from: "vars.local.toml:12" | "--var" | "env:MWP_VAR_GUIDELINES" }`. `mwp explain` renders it — every injected value traces to who wrote it and where (§3.2).
+
+**Cache.** The resolved variable set is part of the map cache key (§5.4): the input hash concatenates the contributing files' contents with a canonical serialisation of the resolved set. Changing `vars.toml`, `vars.local.toml`, `MWP_VAR_*`, or `--var` invalidates the cache exactly as a changed context file would. A warm cache never serves a map built with different values.
+
+Example — one committed template, per-developer output:
+
+```toml
+# .mwp/vars.toml (committed — team-wide)
+project_crate = "mwp-core"
+stack_rules = """
+- public API returns Result, never panics
+- no unwrap in library code
+"""
+```
+
+```toml
+# .mwp/vars.local.toml (gitignored — this developer's private values)
+review_style = "Prefer small PRs; always flag TODO debt you introduce"
+```
+
+```markdown
+# engine/.mwp-context.md (committed — a template)
+---
+layer: 1
+interpolate: true
+---
+This module is crate {{project_crate}}.
+
+{{stack_rules}}
+
+When reviewing changes here, {{review_style}}.
+```
+
+`mwp map engine/<target> --render markdown` substitutes all three placeholders. A second developer with a different `vars.local.toml` gets the same structure with their own review style — and neither developer's private values ever reach git.
+
+---
+
+### 5.7 Template materialization (out of band)
+
+Interpolation at map time (§5.6) changes what the mapper assembles. A second, deliberately separate capability materialises a template into a concrete file on disk:
+
+```bash
+mwp template templates/AGENTS.tpl.md -o AGENTS.md --var role=backend-dev
+```
+
+`mwp template` reads any markdown file containing `{{name}}` placeholders, resolves the same variable set as §5.6 — same sources, same precedence, same `--var` — and writes the substituted result to the output path, or to stdout without `-o`. It shares one interpolation engine with the mapper: exactly one implementation of substitution in the core. Templates may live anywhere; `.mwp/templates/` is the suggested home (committed, alongside skills and hooks, §5.4).
+
+**The boundary is explicit and unchanged.** The mapper reads neither `AGENTS.md` nor `CLAUDE.md` nor any equivalent LLM instruction file (§5.2), and `mwp template` does not change that: it is scaffolding, not mapping. It never runs during `mwp map`, never walks the cascade, never resolves imports. Its purpose: a team commits one `AGENTS.tpl.md`, and each developer materialises their own `AGENTS.md` — shared rules from committed `vars.toml`, private rules from gitignored `vars.local.toml` or CI-injected `MWP_VAR_*`. A generated `AGENTS.md` is still owned by the host tool; the sub-application boundary and the "mapper reads neither file" rule stand exactly as written.
+
+---
+
 ## 6. Resolution algorithm
 
 ```text
@@ -720,9 +805,10 @@ fn map(target, fresh=false):
     # ws_root:  nearest ancestor .mwp with members = [...], or sub_root if none
     # workspace: imports resolve against ws_root; cascade starts from ws_root
     files = traverse_cascade(ws_root, target)    # cheap: stat calls + path arithmetic
+    variables = resolve_variables()              # --var > env > vars.local.toml > vars.toml (§5.6)
 
     if not fresh:
-        key = content_hash(target, files)
+        key = content_hash(target, files, variables)
         if cache_hit(key):
             return cache_read(key)            # fast path — skip everything below
 
@@ -730,6 +816,7 @@ fn map(target, fresh=false):
     for file in files:
         entry = parse(file)                   # frontmatter + markdown body
         entry.imports = resolve_imports(entry)
+        entry.body = interpolate(entry.body, variables)   # §5.6 — before budgeting, so caps count real tokens
         layers.push(assign_layer(entry))
 
     layers = deduplicate(layers)                      # single include, closest-to-root wins
@@ -746,7 +833,7 @@ Four properties this guarantees:
 - **Root-to-leaf order.** Global identity loads first; specific constraints follow in the rendered output.
 - **Deterministic merge.** Two entries at the same layer order by `(priority desc, path asc)`. There is no scoring step.
 - **Single include per resource.** Deduplication runs before budgeting. The same module or file appears once at the highest scope that references it; all lower references are dropped and recorded in the trace as `deduplicated_by: <higher_source>`.
-- **Full trace.** Every entry carries `{ source_path, layer, reason, byte_range_in_output }`. `mwp explain` simply pretty-prints this.
+- **Full trace.** Every entry carries `{ source_path, layer, reason, byte_range_in_output, substitutions }` — `substitutions` records each placeholder resolved into the body and its value source (§5.6). `mwp explain` simply pretty-prints this.
 
 ---
 
@@ -840,6 +927,7 @@ Each layer entry:
   "scope": "recursive",
   "imports_chain": [],
   "body_markdown": "...",
+  "substitutions": [ /* { placeholder, value_from } — §5.6 */ ],
   "guard_status": "passed" | "failed" | "stale" | "unverified" | null
 }
 ```
@@ -976,9 +1064,10 @@ mwp sessions inspect <id>             # show SeenSet and call log for a session
 mwp sessions rm      <id>             # delete a session
 mwp sessions clean                    # remove sessions older than 7 days (configurable)
 mwp serve-mcp                         # start the MCP server (Phase 4)
+mwp template <template> [-o <output>] # materialize a template file with variables — out of band, not the mapper (Phase 6, §5.7)
 ```
 
-Universal flags: `--root <path>` to override anchor discovery, `--budget <layer>=<n>` to override token budgets, `--fresh` on any `mwp map` call to bypass the map cache, and `--session <id>` on any `mwp map` call to attach the invocation to a named session for incremental delta delivery.
+Universal flags: `--root <path>` to override anchor discovery, `--budget <layer>=<n>` to override token budgets, `--fresh` on any `mwp map` call to bypass the map cache, `--session <id>` on any `mwp map` call to attach the invocation to a named session for incremental delta delivery, and `--var <key>=<value>` (repeatable) to override every variable source for that invocation (§5.6).
 
 ---
 
@@ -1061,6 +1150,22 @@ Items below are individually small and prioritized by whatever the author actual
 
 Explicitly deferred: vector search, autonomous agents, LLM-driven summarization, registry hosting.
 
+### Phase 6 — Variables, interpolation, and templates (1 week)
+
+**Goal:** one context template, many instantiations — shared templates with per-user, per-environment, or per-project values.
+
+Deliverables:
+
+- Variable resolution: `.mwp/vars.toml` (committed), `.mwp/vars.local.toml` (gitignored), `MWP_VAR_*` environment, `--var` — with the fixed precedence of §5.6; duplicate keys are an error.
+- Interpolation pass in the core: body-only, opt-in via `interpolate: true` frontmatter, after import resolution and before budgeting; unresolved placeholders fail the map with file and placeholder named; `\{{` escape for literal braces.
+- Cache-key amendment: the resolved variable set joins the input hash (§5.4).
+- Trace: per-entry `substitutions` recorded; `mwp explain` shows value provenance (§5.6).
+- `mwp lint` checks: undefined placeholders, duplicate variable keys, variables declared but never referenced (warning).
+- `mwp template` — materialisation of template files to disk, sharing the core interpolation engine, explicitly outside the mapper's read path (§5.7).
+- `.mwp/.gitignore` template gains `vars.local.toml`.
+
+By the end of Phase 6 the author keeps one committed `.mwp-context.md` template and one `AGENTS.tpl.md` in a project, injects private guidelines through a gitignored `vars.local.toml`, and gets per-developer maps and host-tool files with zero duplication — the first step toward template stack modules (§1.4, §5.3). Phase 6 depends only on Phase 1 (parse/render) and Phase 3 (cache) and runs alongside Phase 5; it is scheduled after Phase 4 so the MCP server inherits interpolation for free — the feature lives in the core render path, not the transport.
+
 ---
 
 ## 11. Repository layout
@@ -1126,6 +1231,10 @@ These are real, not rhetorical. Each one is something to revisit when implementa
 
 9. **Semantic activation beyond path topology.** The current cascade is purely path-based: file location determines what context loads. A richer model would let modules declare activation signals — `activates_on: ["**/auth/**", "keyword:migration"]` — so the map responds to what the developer is actually doing, not just where the target file lives. This is the same mechanism Engram uses for node activation, applied one layer up: activating orientation context rather than solution paths. The activation rules would still be declared (not inferred), preserving determinism. Worth exploring in Phase 5 or later as a separate design. If implemented, the mapper starts to look less like a static cascade and more like a lightweight activation graph — a navigational graph that produces orientation rather than decisions.
 
+10. **Frontmatter interpolation.** Should `{{...}}` be allowed in frontmatter — e.g. `max_tokens: {{budget}}`? Current draft: no — body-only, so layers and budgets are computed from real values. Revisit if a real project shows a frontmatter case a plain value cannot express.
+11. **Placeholder defaults.** Should `{{name|default}}` be supported? Current draft: no — an undefined placeholder is an error, because a silently-defaulted value can hide a misconfigured variable set. Revisit if error-on-undefined proves too strict in practice.
+12. **Non-string variables.** Should variables support numbers or lists? Current draft: strings only — sufficient for word, sentence, paragraph, and path injection. Revisit if a frontmatter use case (item 10) materialises.
+
 ---
 
 ## 14. What "done" looks like at each phase
@@ -1137,6 +1246,7 @@ To keep the project from drifting, each phase has a single concrete acceptance s
 - **Phase 3.** `mwp verify` run as a Git pre-commit hook catches a divergence between `RULES.md` ("public methods return `Result`") and the codebase, and refuses the commit.
 - **Phase 4.** Claude Code, with `mwp serve-mcp` configured, fetches the right context for the currently open file without the author pasting anything — and the trace is identical to `mwp explain`.
 - **Phase 5.** Someone other than the author starts a project with `mwp init`, imports two community modules, and gets a workable setup within an hour, without reading the spec.
+- **Phase 6.** Two developers on the same repo, each with their own gitignored `.mwp/vars.local.toml`: the same committed `.mwp-context.md` template renders two different maps, each carrying its owner's private guidelines, and `mwp explain` names the exact file and line every value came from — no shared file was duplicated, nothing private was ever committed.
 
 The order is intentional: each scenario is the smallest thing that proves the phase's idea, and each one is independently useful. If we stop after Phase 1, we still have a tool worth using.
 

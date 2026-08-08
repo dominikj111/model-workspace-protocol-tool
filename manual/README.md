@@ -150,6 +150,25 @@ a confirmation prompt and a count of what will be deleted. Then drop the **mwp**
 
 ---
 
+## Manual implementation roadmap
+
+Phases are sized so each one ends with something usable. No phase depends on speculative future work.
+
+| Phase | Feature | Script(s) | Status |
+| :--- | :--- | :--- | :--- |
+| M1 | Cascade traversal | `concat-context.sh` | ✅ done |
+| M2 | Bootstrap + explore | `bootstrap.sh`, `explore.sh` | ✅ done |
+| M3 | Session orientation | `changes.sh`, `discoveries.md` | ✅ done |
+| M4 | Verified references | `mwp-verify.sh` | ✅ done |
+| **M5** | **Variables and interpolation** | `interpolate.sh` + `concat-context.sh` amendment | **⬅ next** |
+| M6 | Template materialization | `mwp-template.sh` | planned |
+
+**M5 — Variables and interpolation.** Read `.mwp/vars.toml` (committed) and `.mwp/vars.local.toml` (gitignored) and `MWP_VAR_*` env with the precedence defined in §5.6 of the proposal. Substitute `{{name}}` placeholders in context bodies that declare `interpolate: true` in their frontmatter. Undefined placeholders are an error. `concat-context.sh` gains an `--interpolate` flag. See proposal §5.6, Phase 6.
+
+**M6 — Template materialization.** A script that materialises any template file with the same variable set and writes the result to disk — the shell equivalent of `mwp template` (proposal §5.7).
+
+---
+
 ## Files in this folder
 
 | File                    | Role                                                                            |
