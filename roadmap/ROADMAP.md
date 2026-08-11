@@ -33,6 +33,7 @@ is already YAML; the body just moves to a key), so the cost is low.
 | --- | ----------------------------------------------------- | ------ | ------- |
 | 00a | Agent Skills: make discoverable by pi.dev/harnesses    | ⬜      | [handoff](handoffs/02-skills-discovery.md) |
 | 00b | Extract format spec from proposal (`docs/format-spec.md`)  | ⬜      | — |
+| 00c | Project boundaries: excerpt + soft re-anchoring             | ⬜      | — |
 
 **Goal (00a):** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
 `.mwp/skills/`, but neither path is in any harness's discovery list. Move installation
@@ -46,6 +47,20 @@ the implementation contract. States up front that the proposal is authoritative.
 This is the quick-reference for manual script authors and the eventual Rust
 developer. Will need a refresh pass after story 00 (`.mwp-context.yaml`
 migration changes the context file format).
+
+**Goal (00c):** Amend proposal §5.2 — boundary files (`AGENTS.md`,
+`AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`, `.cursorrules`) become soft
+anchors. Parent map: leaf entries carry a short deterministic excerpt
+(frontmatter `description:` else first paragraph, ≤ 5 lines — extraction, never
+summarization). Focused map: a target inside a boundary directory re-anchors
+the cascade there — no `mwp init` required; the boundary file is that map's L0
+identity. Acceptance: parent map of a tree with nested projects shows each as a
+leaf with excerpt and no internal context; `mwp map` targeting a file inside a
+boundary directory produces a map rooted at that directory; `mwp lint` flags a
+context file beside a boundary file; a materialised `AGENTS.md` (`mwp template`)
+carries a `description:` frontmatter — `AGENTS.tpl.md` includes it so parent
+maps show a useful excerpt. Reflect in `manual/protocol.md` and
+`docs/format-spec.md`.
 
 ---
 

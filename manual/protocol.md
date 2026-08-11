@@ -176,6 +176,15 @@ The map is terrain, not work history. Source code and git history cover the work
 L0–L1 applies everywhere. L2–L4 applies within its directory scope and all children.
 More specific (closer to target) overrides less specific when they conflict.
 `.mwp-context.md` at a directory boundary (where `.mwp/` exists) stops upward traversal.
+`AGENTS.md`, `AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`, `.cursorrules` (and equivalents)
+stop **downward** traversal: a directory carrying one is a project boundary. From the parent
+map it appears as a leaf entry — name, path, and a short deterministic excerpt (frontmatter
+`description:` or the first non-heading paragraph, ≤ 5 lines; extraction, never a summary).
+When the target lies inside such a directory, the boundary file re-anchors the map: the
+cascade starts there and descends to the target, with the boundary file as that map's L0
+identity — no `mwp init` required. This is how the mapper distinguishes project A from
+project B inside a shared tree: each boundary file is a nested root; `.mwp/` remains the
+hard anchor above them.
 
 ---
 

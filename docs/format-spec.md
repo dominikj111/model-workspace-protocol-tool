@@ -123,13 +123,21 @@ owners:                 # who maintains this context
 - **Context granularity:** Keep files small (~2–8K tokens). If a file grows,
   split by concern and use `local:` imports to reference siblings.
 
-### LLM instruction file boundary
+### Project boundary — LLM instruction files as soft anchors
 
-`CLAUDE.md`, `.cursorrules`, `AGENTS.md` (and equivalents) mark a sub-application
-boundary. When the mapper finds one, it stops descending and includes only the
-directory's topology entry (name, path, role). It does not load the sub-project's
-internal context. A directory with both `.mwp-context.yaml` and a `CLAUDE.md` is
-a conflict — `mwp lint` warns.
+Boundary set: `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CONTEXT.md`,
+`.cursorrules` (configurable). `.mwp-context.*` is never a boundary.
+
+- **Parent map:** stop descending; emit a leaf entry `{name, path, excerpt}`.
+  Excerpt = frontmatter `description:` if present, else the first non-heading
+  paragraph, truncated to 5 lines. Deterministic extraction only — never
+  summarization. Internal conventions are not loaded.
+- **Focused map:** a target inside a boundary directory re-anchors the cascade
+  at that directory; it becomes the map root and the boundary file is its L0
+  identity. No `.mwp/` required (soft anchor). A hard anchor (`.mwp/`) above
+  still applies budgets and trust.
+- **Conflict:** `.mwp-context.*` beside a boundary file in the same directory —
+  `mwp lint` warns.
 
 ---
 

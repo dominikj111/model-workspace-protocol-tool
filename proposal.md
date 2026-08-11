@@ -405,16 +405,48 @@ Keep individual context files small. A useful target is **2k–8k tokens per con
 
 The root `.mwp-context.md` remains the cascade entry point and declares the imports. This keeps the cascade fast and avoids delivering testing conventions to a session focused purely on routing. Sections to consider when splitting: **Routing** (where this context applies), **Contracts** (rules the code must obey), **References** (files the model should inspect), **Assumptions** (invariants guards verify), **Known Failure Modes** (common drift points).
 
-#### LLM instruction files as sub-application boundaries
+#### LLM instruction files as project boundaries
 
-`CLAUDE.md`, `.cursorrules`, `AGENTS.md`, and equivalent files mark a sub-application boundary during cascade traversal. When the mapper descends into a directory and finds one of these files, it stops and does not traverse deeper. The directory is added to the workspace map as a sub-application reference — topology-level only, exactly as `map_workspace()` without a target would present it: name, path, and declared role. Its internal conventions are not loaded into the current map.
+`AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CONTEXT.md`, `.cursorrules`,
+and equivalent files mark a **project boundary** during cascade traversal (the
+set is configurable; `.mwp-context.*` is never a boundary — it is the tool's own
+file). Two anchor kinds exist:
 
-This rule has two consequences:
+- **Hard anchor** — `.mwp/` with `config.toml`. Controls budgets, trust,
+  members; the cascade boundary (§5.1).
+- **Soft anchor** — a boundary file in a directory with no `.mwp/`. Marks a
+  nested project root: an external plugin, a linked or cloned repository, a
+  module with its own operating file. The mapper treats presence as a stop
+  signal, nothing more — it never needs to understand the file's semantics.
 
-- A sub-project that has `CLAUDE.md` but no `.mwp/` is opaque to the parent map — and that is intentional. From the parent project's perspective, only the sub-project's basic role and interface matter. To work inside it, the sub-project must be initialised with `mwp init` first. Calling `map_workspace(target)` with a path inside an uninitialised sub-project exits with a message directing the user to run `mwp init` there — it does not produce a partial map.
-- The mapper never needs to understand the semantics of these files. It treats their presence as a stop signal, nothing more.
+**Parent map (descending past a boundary):** the mapper stops and does not
+traverse deeper. The directory becomes a leaf entry: name, path, and a short
+**excerpt** from its boundary file — frontmatter `description:` if present,
+else the first non-heading paragraph, capped at 5 lines. The excerpt is a
+deterministic extraction, never a summary: the tool assembles and truncates, it
+does not interpret. The excerpt is the sub-project's declared role in the
+parent's architecture; its internal conventions are not loaded into the current
+map.
 
-`mwp lint` reports a warning when a directory has both a `.mwp-context.md` and a `CLAUDE.md` (or equivalent) — that combination is a conflict; the two are mutually exclusive at the same directory level.
+**Focused map (target inside a boundary):** the boundary file re-anchors the
+map — the cascade starts at that directory and descends to the target,
+collecting `.mwp-context.*` files below it. No `mwp init` is required; when a
+hard anchor exists above, its budgets and trust still apply. The boundary file
+is the L0 identity of that map.
+
+Consequences:
+
+- From the parent project's perspective, only the sub-project's basic role and
+  interface matter. A soft-anchored sub-project is visible as an entry with an
+  excerpt; a hard-anchored one additionally participates in workspace imports
+  (§5.3) and budgets.
+- The excerpt is the bridge between the two maps: the parent session sees
+  enough to route; the sub-project session reads its own boundary file for
+  everything else.
+- `mwp lint` reports a warning when a directory has both a `.mwp-context.*` and
+  a boundary file — a conflict; the two are mutually exclusive at the same
+  directory level (a project root carries its L0 identity in the boundary file,
+  never in a context file beside it).
 
 ### 5.3 Modules
 
@@ -792,7 +824,7 @@ mwp template templates/AGENTS.tpl.md -o AGENTS.md --var role=backend-dev
 
 `mwp template` reads any markdown file containing `{{name}}` placeholders, resolves the same variable set as §5.6 — same sources, same precedence, same `--var` — and writes the substituted result to the output path, or to stdout without `-o`. It shares one interpolation engine with the mapper: exactly one implementation of substitution in the core. Templates may live anywhere; `.mwp/templates/` is the suggested home (committed, alongside skills and hooks, §5.4).
 
-**The boundary is explicit and unchanged.** The mapper reads neither `AGENTS.md` nor `CLAUDE.md` nor any equivalent LLM instruction file (§5.2), and `mwp template` does not change that: it is scaffolding, not mapping. It never runs during `mwp map`, never walks the cascade, never resolves imports. Its purpose: a team commits one `AGENTS.tpl.md`, and each developer materialises their own `AGENTS.md` — shared rules from committed `vars.toml`, private rules from gitignored `vars.local.toml` or CI-injected `MWP_VAR_*`. A generated `AGENTS.md` is still owned by the host tool; the sub-application boundary and the "mapper reads neither file" rule stand exactly as written.
+**The boundary is explicit and unchanged.** The mapper never loads `AGENTS.md`, `CLAUDE.md`, or any equivalent LLM instruction file into the cascade (§5.2); the only read is the deterministic boundary excerpt — frontmatter `description:` or the first non-heading paragraph, capped at 5 lines — for the parent map's leaf entry. `mwp template` does not change that: it is scaffolding, not mapping. It never runs during `mwp map`, never walks the cascade, never resolves imports. Its purpose: a team commits one `AGENTS.tpl.md`, and each developer materialises their own `AGENTS.md` — shared rules from committed `vars.toml`, private rules from gitignored `vars.local.toml` or CI-injected `MWP_VAR_*`. A materialised `AGENTS.md` is still owned by the host tool; the project-boundary rule and the "mapper never loads these files" rule stand exactly as written.
 
 ---
 
