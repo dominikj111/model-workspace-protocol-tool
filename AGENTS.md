@@ -11,6 +11,7 @@ Spec-stage project: a deterministic **workspace mapper** — a future Rust CLI +
 | Design, architecture, decisions | `docs/proposal.md` (long — read the §N cited on the active story card; index: `docs/index.md`) |
 | User-facing manual protocol | `manual/protocol.md` |
 | Manual scripts — install, use, upgrade | `manual/README.md` |
+| Publish a new manual version | `docs/release.md` |
 | What's done / what's next | `roadmap/ROADMAP.md` + newest `roadmap/handoffs/` |
 | MWP session skills | `manual/skills/` (mwp, handoff, mapping, maintaining-mwp-contexts) |
 

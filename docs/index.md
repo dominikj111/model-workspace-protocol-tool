@@ -22,4 +22,5 @@ proposal amendment** — a stale map is worse than none.
 | Open questions | §13 |
 | Relationship to Engram | §14 |
 
-Companions: [`manual/protocol.md`](../manual/protocol.md) — protocol for the manual implementation.
+Companions: [`manual/protocol.md`](../manual/protocol.md) — protocol for the manual implementation;
+[`release.md`](release.md) — how to publish a new manual version.

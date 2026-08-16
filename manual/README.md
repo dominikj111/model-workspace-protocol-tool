@@ -129,7 +129,9 @@ curl --proto '=https' --tlsv1.2 -sSf \
   https://raw.githubusercontent.com/dominikj111/model-workspace-protocol-tool/main/manual/mwp-up | sh
 ```
 
-`mwp-up` skips any files that already exist, so re-running it is always safe.
+`mwp-up` re-downloads every script and `protocol.md` (overwriting in place), so re-running
+it on an existing project refreshes the whole toolchain — and installs any newly shipped
+scripts. The upgrade check lives in `upgrade.sh`.
 
 To check for a newer manual implementation, run:
 

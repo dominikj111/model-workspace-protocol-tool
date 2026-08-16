@@ -131,6 +131,12 @@ fetch_file "$BASE_URL/skills/mapping/SKILL.md" ".mwp/skills/mapping/SKILL.md"
 fetch_file "$BASE_URL/skills/maintaining-mwp-contexts/SKILL.md" ".mwp/skills/maintaining-mwp-contexts/SKILL.md"
 fetch_script "$BASE_URL/hooks/mwp-guard.sh" ".mwp/hooks/mwp-guard.sh"
 
+# Prune skills that were removed from the distribution (left behind by older installs)
+if [ -d ".mwp/skills/handoff" ]; then
+  rm -rf .mwp/skills/handoff
+  warn "Removed stale .mwp/skills/handoff (no longer shipped)"
+fi
+
 # ── Protocol ──────────────────────────────────────────────────────────────────
 fetch_file "$BASE_URL/protocol.md" ".mwp/protocol.md"
 

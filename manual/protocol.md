@@ -1,5 +1,5 @@
 ---
-version: "0.3.0"
+version: "0.4.0"
 ---
 
 # Workspace Mapping Protocol
@@ -119,6 +119,17 @@ Good candidates:
 
 Do **not** create one per folder — only where the scope is meaningful and the content
 would be non-trivial to derive from the code alone.
+
+**Legacy `.mwp-context.md` files keep working.** The cascade falls back to them
+(`.mwp-context.yaml` → `.mwp-context.yml` → `.mwp-context.md`), so an upgraded
+project does not break mid-migration. To convert them to the YAML format, run:
+
+```bash
+bash .mwp/migrate-to-yaml.sh
+```
+
+It converts in place and deletes the originals. Idempotent; files with a
+`.yaml`/`.yml` sibling are skipped (conflict), never merged.
 
 ### Workflow for Context Files
 
