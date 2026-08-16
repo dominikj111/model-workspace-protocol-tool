@@ -47,8 +47,9 @@ is already YAML; the body just moves to a key), so the cost is low.
 **Goal (00a):** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
 `.mwp/skills/`, but neither path is in any harness's discovery list. Move installation
 to `.agents/skills/mwp/` (standard cross-tool location), add cwd-assumption notes
-to skill files, namespace names (`mwp-core`, `mwp-handoff`, `mwp-mapping`), and
-document per-tool bridges in the post-install message.
+to skill files, namespace names (`mwp-core`, `mwp-mapping`), and
+document per-tool bridges in the post-install message. (The `handoff` skill was
+removed in a later chore — its mwp-specific parts live in the `mwp` skill.)
 
 **Goal (00b): RESOLVED.** A separate `docs/format-spec.md` extraction was written
 then removed as redundant: the proposal is navigable via `docs/index.md` (topic →

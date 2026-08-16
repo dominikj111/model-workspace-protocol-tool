@@ -151,7 +151,7 @@ Suffix `?` on any item inferred rather than directly observed:
 - stack: Node.js, TypeScript
 - stack?: tRPC  (inferred from ./backend/package.json dependency)
 - boundary: owns HTTP API layer, no direct browser access
-- skills: use .mwp/skills/handoff/SKILL.md for task delegation
+- skills: use .mwp/skills/mwp/SKILL.md for the session protocol
 - constraint?: bundle < 200 KB  (inferred from ./frontend/README.md)
 ```
 

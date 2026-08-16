@@ -6,6 +6,12 @@
 **Goal:** MWP skills must work in pi.dev, Claude Code, OpenCode, OpenClaude,
 and any other harness that follows the Agent Skills standard.
 
+> **Note (later decision):** the `handoff` skill was removed in a later chore
+> (its mwp-specific parts — verify, record, orient-next-session — were folded
+> into the `mwp` skill). Only `mwp` and `mapping` ship as installable skills
+> now, plus `maintaining-mwp-contexts`. The rename rows for `handoff` in the
+> Files-to-change table below are stale.
+
 ---
 
 ## Context — the cross-tool landscape

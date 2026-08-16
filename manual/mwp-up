@@ -122,13 +122,11 @@ fetch_script "$BASE_URL/migrate-to-yaml.sh" ".mwp/migrate-to-yaml.sh"
 
 # ── Skill and Hooks ───────────────────────────────────────────────────────────
 mkdir -p .mwp/skills/mwp
-mkdir -p .mwp/skills/handoff
 mkdir -p .mwp/skills/mapping
 mkdir -p .mwp/skills/maintaining-mwp-contexts
 mkdir -p .mwp/hooks
 
 fetch_file "$BASE_URL/skills/mwp/SKILL.md"      ".mwp/skills/mwp/SKILL.md"
-fetch_file "$BASE_URL/skills/handoff/SKILL.md" ".mwp/skills/handoff/SKILL.md"
 fetch_file "$BASE_URL/skills/mapping/SKILL.md" ".mwp/skills/mapping/SKILL.md"
 fetch_file "$BASE_URL/skills/maintaining-mwp-contexts/SKILL.md" ".mwp/skills/maintaining-mwp-contexts/SKILL.md"
 fetch_script "$BASE_URL/hooks/mwp-guard.sh" ".mwp/hooks/mwp-guard.sh"

@@ -30,6 +30,15 @@ Before any **side-effect actions** (writes, deletes, commits, deploys):
     *   **Exit 0**: Proceed normally.
     *   **Exit 1**: Context is **READ-ONLY**. Report failures to the user and do not apply changes.
 
+## 🔄 Handoff (end of session)
+
+When ending a session or transferring work:
+
+1.  **Verify**: Run `bash .mwp/mwp-verify.sh` and resolve failures before leaving.
+2.  **Record**: Write findings, in-progress state, and next steps into `.mwp/discoveries.md`.
+3.  **Orient the next session**: Leave a one-line pointer —
+    "Orient using MWP: read `.mwp/topology.md` and `.mwp/discoveries.md`; run `bash .mwp/concat-context.sh <active-dir>`."
+
 ## 📝 Documenting the Terrain
 
 *   **Topology**: Regenerate via `bash .mwp/bootstrap.sh` if directory structure changes significantly.
