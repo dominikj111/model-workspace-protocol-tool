@@ -40,6 +40,7 @@ repository is a design specification intended to guide the eventual Rust impleme
 - **Community modules** — domain expertise (Rust idioms, Django conventions, stack-specific rules) shared as pinned Git imports
 - **Verified references** — guards: scripts that confirm the codebase satisfies a constraint before the map includes it
 - **Two-phase lensing** — sessions start with a project orientation map, then narrow to a focused file-level map
+- **Spread memory** — orientation knowledge distributed across the tree at the level it describes: scoped retrieval, error isolation, and cross-module convention propagation — RAG's motivation without RAG's mechanism (resolution stays path-based and explainable)
 - **MCP server** — same binary, exposes the mapper to any MCP-aware LLM client with incremental delta delivery per connection
 
 ## License

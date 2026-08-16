@@ -151,6 +151,21 @@ that is not a reason to deny AI-edits. This document itself is AI-generated and 
 curated; ctx files deserve the same treatment. Human review is what makes a ctx file
 authoritative — not the identity of its author.
 
+**The cascade as spread memory.** This distribution is not incidental — it is a
+memory architecture. Where RAG spreads a knowledge base across an embedding index
+and retrieves by similarity, MWP spreads orientation knowledge across the
+filesystem at the level it describes and retrieves by path. The robustness
+argument carries over: a fact lives beside what it governs, each stage is small
+and independently maintainable, so a stale or mistaken context file contaminates
+only its own scope instead of one monolithic document, and each session retrieves
+the slice it needs (§5.2) rather than a single brittle load. Elevation and
+push-down give the memory its dynamics — generic facts graduate, local facts sink
+— and community modules (§5.3) spread it across projects. The deliberate
+difference from RAG is the mechanism: §2 rules out vector search, resolution is
+path-based and explainable, and every item in a map traces to a file. MWP shares
+RAG's motivation — bounded, relevant context instead of a monolithic load —
+without its probabilistic machinery.
+
 The boundary rule from §5.2.4 applies at module roots: when a module already carries a
 boundary file (`AGENTS.md`, `CONTEXT.md`, `llms.txt`, …), no mwp ctx file is placed
 beside it — the `.mwp/` directory is the correct home when the module defines its own
@@ -1342,7 +1357,7 @@ The core mechanic: nodes represent concepts and states; edges represent transiti
 
 ### What MWP is, by contrast
 
-MWP is a deterministic orientation layer that assembles human-authored context before an LLM session starts. It does not act on queries, does not store outcomes, and does not learn. It reads the filesystem, collects and verifies the relevant context files, applies budget constraints, and hands off a structured orientation bundle. From that point it is out of the loop — the LLM navigates the project and produces its work.
+MWP is a deterministic orientation layer that assembles human-authored context before an LLM session starts. It does not act on queries, does not store outcomes, and does not learn. It reads the filesystem, collects and verifies the relevant context files, applies budget constraints, and hands off a structured orientation bundle. From that point it is out of the loop — the LLM navigates the project and produces its work. It does not learn, but it remembers: orientation knowledge is spread across the tree at the level it describes — distributed memory, revised by curation rather than reinforced by outcomes (§1.6).
 
 ### Comparison
 
@@ -1352,6 +1367,7 @@ MWP is a deterministic orientation layer that assembles human-authored context b
 | Source of truth          | Confirmed session outcomes (learned)         | Human-authored markdown (authored)           |
 | When it acts             | At query / session time                      | Before the session starts                    |
 | Does it learn?           | Yes — graph reinforcement from outcomes      | No — static collection from files            |
+| Memory model             | Convergent — confirmed outcomes consolidate into a graph | Distributed — orientation facts spread across the tree, revised by curation |
 | LLM relationship         | Can substitute, preprocess, or be queried by LLM | Orients LLM before it begins work       |
 | Determinism basis        | Graph structure + confidence thresholds      | File path + frontmatter + layer order        |
 | Primary domain           | Repeated operational queries, bounded domains | Exploratory work, authoring, development   |
