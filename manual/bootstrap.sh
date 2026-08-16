@@ -74,8 +74,8 @@ mwp_find() {
     | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""
 
-  echo "## .mwp-context.md Files"
-  mwp_find "" -name ".mwp-context.md" \
+  echo "## Context Files (.mwp-context.*)"
+  mwp_find "" -name ".mwp-context.yaml" -o -name ".mwp-context.yml" -o -name ".mwp-context.md" \
     | grep -v '\./\.mwp/' \
     | sort | while IFS= read -r f; do echo "- $f"; done
   echo ""

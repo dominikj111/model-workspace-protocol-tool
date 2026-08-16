@@ -15,7 +15,7 @@ fi
 cd "$_r" || exit 1
 
 # Count context files before removal so we can report them
-context_count=$(find . -name ".mwp-context.md" \
+context_count=$(find . \( -name ".mwp-context.yaml" -o -name ".mwp-context.yml" -o -name ".mwp-context.md" \) \
   -not -path '*/.git/*' \
   -not -path '*/node_modules/*' \
   -not -path '*/target/*' \
@@ -23,7 +23,7 @@ context_count=$(find . -name ".mwp-context.md" \
 
 printf "\n  This will remove:\n"
 printf "    • .mwp/  (tooling directory)\n"
-printf "    • %s .mwp-context.md file(s) found in the project tree\n" "$context_count"
+printf "    • %s context file(s) (.mwp-context.yaml/.yml/.md) found in the project tree\n" "$context_count"
 printf "    • .mwpignore  (if present)\n"
 printf "\n  Continue? [y/N] "
 IFS= read -r answer < /dev/tty
@@ -40,12 +40,12 @@ echo "  removed  .mwp/"
 
 # Remove context files
 if [ "$context_count" -gt 0 ]; then
-  find . -name ".mwp-context.md" \
+  find . \( -name ".mwp-context.yaml" -o -name ".mwp-context.yml" -o -name ".mwp-context.md" \) \
     -not -path '*/.git/*' \
     -not -path '*/node_modules/*' \
     -not -path '*/target/*' \
     -delete
-  echo "  removed  $context_count .mwp-context.md file(s)"
+  echo "  removed  $context_count context file(s)"
 fi
 
 # Remove .mwpignore if present

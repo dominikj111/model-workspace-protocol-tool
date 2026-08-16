@@ -1,6 +1,6 @@
 ---
 name: maintaining-mwp-contexts
-description: Use when meeting an unknown or foreign repository, module, or site; when working in a repository that carries MWP context files (.mwp-context.md / .mwp-context.yml) or boundary files (AGENTS.md, CONTEXT.md, CLAUDE.md, llms.txt); when a context file contradicts the code, sits at the wrong cascade level, or is missing where a directory has conventions worth stating.
+description: Use when meeting an unknown or foreign repository, module, or site; when working in a repository that carries MWP context files (.mwp-context.yaml, legacy .mwp-context.md) or boundary files (AGENTS.md, CONTEXT.md, CLAUDE.md, llms.txt); when a context file contradicts the code, sits at the wrong cascade level, or is missing where a directory has conventions worth stating.
 origin: mwp-tool
 ---
 
@@ -32,8 +32,8 @@ touch context files; no speculative context gardening.
 
 ### 1. Labelling — meet an unknown system
 
-1. Read the labels first: `.mwp-context.md` / `.mwp-context.yml` along the path,
-   then boundary files (`AGENTS.md`, `AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`,
+1. Read the labels first: `.mwp-context.yaml` (legacy `.mwp-context.md` / `.yml`
+   alias still read) along the path, then boundary files (`AGENTS.md`, `AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`,
    `.cursorrules`, `llms.txt`), then `README`.
 2. Orient from them — what the directory is, owns, and must not do. Do not re-derive
    what a label already states.

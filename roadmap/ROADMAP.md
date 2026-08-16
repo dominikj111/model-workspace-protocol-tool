@@ -6,13 +6,21 @@ and proposal § refs. One story at a time.
 
 Story statuses: ⬜ backlog / 🔄 in progress / ✅ done
 
+## Current state
+
+**Spec/proposal stage — no CLI.** The manual implementation (`manual/`) works and
+delivers the cascade workflow. S-00 (context format → `.mwp-context.yaml`) is done:
+legacy `.mwp-context.md` is still read and `migrate-to-yaml.sh` converts it. All
+remaining cards are backlog; the next story to pick up is 00a (skills discovery,
+handoff 02) or 00b (format spec extraction, `docs/format-spec.md` largely exists).
+
 ---
 
 ## Step 0 — Format migration (manual + docs)
 
 | ID  | Story                                      | Status | Handoff |
 | --- | ------------------------------------------ | ------ | ------- |
-| 00  | `.mwp-context.md` → `.mwp-context.yaml`    | ⬜      | [handoff](handoffs/01-mwp-context-yaml.md) |
+| 00  | `.mwp-context.md` → `.mwp-context.yaml`    | ✅      | [handoff](handoffs/01-mwp-context-yaml.md) |
 
 **Goal:** Migrate the context file format from Markdown-with-YAML-frontmatter to
 pure YAML. The markdown body moves into a `description` key. All existing

@@ -18,7 +18,7 @@ At the beginning of every session, you MUST:
 
 Once a target file or directory is identified, follow this sequence **BEFORE** doing any work:
 
-1.  **Load Cascade**: Run `bash .mwp/concat-context.sh <target-path>` to inject the `.mwp-context.md` hierarchy.
+1.  **Load Cascade**: Run `bash .mwp/concat-context.sh <target-path>` to inject the `.mwp-context.yaml` hierarchy.
     *   *Note: Run once per session per target. Do not waste tokens re-running for the same scope.*
 2.  **Record Findings**: If you learn something new from the cascade or code, update `.mwp/discoveries.md` immediately.
 
@@ -33,7 +33,7 @@ Before any **side-effect actions** (writes, deletes, commits, deploys):
 ## 📝 Documenting the Terrain
 
 *   **Topology**: Regenerate via `bash .mwp/bootstrap.sh` if directory structure changes significantly.
-*   **Context Files**: Proactively maintain `.mwp-context.md` files in key directories.
+*   **Context Files**: Proactively maintain `.mwp-context.yaml` files in key directories.
     *   **Scope**: These are strictly descriptive "mini-AGENTS.md" terrain maps, not session memory or work logs.
     *   **Propose Update**: If you learn stable architectural rules or "surprises", ask the user if you should record them to save future tokens.
     *   **Create**: Use `bash .mwp/context-scaffold.sh <dir>` for new scopes.

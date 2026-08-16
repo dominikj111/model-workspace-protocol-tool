@@ -24,10 +24,11 @@ This creates `.mwp/` in your project with:
 | ----------------------- | ------------------------------------------------------------------------------- |
 | `bootstrap.sh`          | Scans the project and generates `topology.md`                                   |
 | `explore.sh`            | Ad-hoc map of any directory — the AI assistant's "digital eyes"                 |
-| `concat-context.sh`     | Concatenates the `.mwp-context.md` cascade to a target — run once per session   |
+| `concat-context.sh`     | Concatenates the `.mwp-context.yaml` cascade to a target — run once per session   |
+| `migrate-to-yaml.sh`    | Converts legacy `.mwp-context.md` files to `.mwp-context.yaml` (one-time)         |
 | `changes.sh`            | Session-start orientation: recent commits, uncommitted state, topology status   |
 | `search.sh`             | `.mwpignore`-aware code search — `bash .mwp/search.sh <pattern> [path]`         |
-| `context-scaffold.sh`   | Creates a `.mwp-context.md` stub in a directory for the AI to fill in           |
+| `context-scaffold.sh`   | Creates a `.mwp-context.yaml` stub in a directory for the AI to fill in           |
 | `uninstall.sh`          | Remove manual mwp-tool from the repository                                      |
 | `protocol.md`           | Instructions for the AI assistant — load this in CLAUDE.md                      |
 | `topology.md`           | Generated structural index (sub-projects, entry points, schemas, config)        |
@@ -59,14 +60,15 @@ bash .mwp/explore.sh ./backend    # specific path
 ```
 
 Outputs structure, sub-project markers, entry points, config files, and the ancestor
-`.mwp-context.md` cascade for that location. Useful as the AI assistant's "digital eyes"
+`.mwp-context.yaml` cascade for that location. Useful as the AI assistant's "digital eyes"
 when lensing into a new area mid-session.
 
 ---
 
-## Loading the .mwp-context.md cascade
+## Loading the .mwp-context.yaml cascade
 
-Once the target is known, concatenate all `.mwp-context.md` files from root to target:
+Once the target is known, concatenate all context files from root to target
+(lookup per directory: `.mwp-context.yaml` → `.mwp-context.yml` → legacy `.mwp-context.md`):
 
 ```bash
 bash .mwp/concat-context.sh ./backend/src/api/routes.ts
@@ -100,7 +102,7 @@ fixtures/
 `protocol.md` tells the assistant to:
 
 1. Run `changes.sh` and read `topology.md` and `discoveries.md` at session start.
-2. When a target is known, run `concat-context.sh` once to load the `.mwp-context.md` cascade.
+2. When a target is known, run `concat-context.sh` once to load the `.mwp-context.yaml` cascade.
 3. Write any new findings into `discoveries.md` for future sessions.
 
 `discoveries.md` accumulates across sessions — each session fills in gaps the previous one left.
@@ -117,7 +119,7 @@ all scripts. No manual configuration needed — just commit what git sees:
   without each person running bootstrap after a clone.
 - **`.mwp/discoveries.md`** — permanent accumulated findings; must be committed or knowledge
   is lost between machines and contributors.
-- **`.mwp-context.md` files** — scattered across the project tree alongside source code;
+- **`.mwp-context.yaml` files** (legacy `.mwp-context.md` until migrated) — scattered across the project tree alongside source code;
   commit them like any other source file.
 
 Scripts are gitignored and re-fetched on demand. After a fresh clone, run:
@@ -145,7 +147,7 @@ bash .mwp/upgrade.sh
 bash .mwp/uninstall.sh
 ```
 
-Removes `.mwp/`, all `.mwp-context.md` files in the project tree, and `.mwpignore` — with
+Removes `.mwp/`, all `.mwp-context.yaml`/`.yml`/`.md` files in the project tree, and `.mwpignore` — with
 a confirmation prompt and a count of what will be deleted. Then drop the **mwp** lines (and the session-start block) from your `CLAUDE.md`.
 
 ---
@@ -179,7 +181,8 @@ Phases are sized so each one ends with something usable. No phase depends on spe
 | `concat-context.sh`     | Cascade concatenator — downloaded to `.mwp/concat-context.sh`                   |
 | `changes.sh`            | Session-start orientation — downloaded to `.mwp/changes.sh`                     |
 | `search.sh`             | `.mwpignore`-aware search — downloaded to `.mwp/search.sh`                      |
-| `context-scaffold.sh`   | `.mwp-context.md` stub writer — downloaded to `.mwp/context-scaffold.sh`        |
+| `context-scaffold.sh`   | `.mwp-context.yaml` stub writer — downloaded to `.mwp/context-scaffold.sh`        |
+| `migrate-to-yaml.sh`    | Legacy `.mwp-context.md` → `.mwp-context.yaml` converter — downloaded to `.mwp/migrate-to-yaml.sh` |
 | `upgrade.sh`            | Version checker — downloaded to `.mwp/upgrade.sh`                                |
 | `uninstall.sh`          | Removal script — downloaded to `.mwp/uninstall.sh`                              |
 | `protocol.md`           | Protocol instructions — downloaded to `.mwp/protocol.md`                        |

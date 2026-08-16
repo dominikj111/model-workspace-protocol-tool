@@ -52,9 +52,10 @@ tags are open-ended hints for community module suggestions. `shared = true` sign
 
 ## Context files (`.mwp-context.yaml`) — YAML — proposal §5.2
 
-> **Note:** Currently `.mwp-context.md` (YAML frontmatter + markdown body).
-> Story 00 migrates to `.mwp-context.yaml` (pure YAML, body in `description` key).
-> This spec shows the target format.
+> **Story 00 done:** the context format is pure YAML (body in the `description`
+> key). Legacy `.mwp-context.md` (YAML frontmatter + markdown body) is still
+> **read** during the migration window — the cascade falls back to it — and
+> `manual/migrate-to-yaml.sh` converts and deletes originals.
 
 Optional at every directory level below root. Not used at project root (that space
 belongs to `CLAUDE.md`, `.cursorrules`, etc.). When traversing the cascade, a
@@ -109,15 +110,21 @@ owners:                 # who maintains this context
 
 ### Rules
 
-- **Extension:** `.mwp-context.yaml` (official), `.mwp-context.yml` (accepted alias).
-  Mapper looks for `.yaml` first, falls back to `.yml`. Both in the same directory
-  is an error.
+- **Extension:** `.mwp-context.yaml` (official), `.mwp-context.yml` (accepted alias),
+  legacy `.mwp-context.md` (still read, flagged for migration). Mapper looks for
+  `.yaml` first, falls back to `.yml`, then to `.md`. Both `.yaml` and `.yml` in
+  the same directory is an error; a stale `.md` beside a `.yaml` is a `mwp lint` warning.
 - **No `../` in `local:` imports.** Ancestor context arrives via the cascade.
   Flagged by `mwp lint`.
 - **`local:` path scope:** Only the declaring file's directory and subdirectories.
   No absolute paths.
 - **`description`:** YAML literal block scalar (`|`). The markdown inside carries
   over unchanged — headings, lists, code spans, links.
+- **`description` is AGENTS.md-compatible prose.** When a directory is extracted
+  into a standalone project or repository, its context may become the boundary
+  `AGENTS.md`: the `description` becomes that file's body (a materialised
+  `AGENTS.md` carries a `description:` frontmatter with the same role). Write it
+  as self-contained, readable markdown — like a mini-AGENTS.md — never as data.
 - **`scope: local`:** Context applies only to the immediate directory, not
   descendants. Default `recursive` means children inherit.
 - **Context granularity:** Keep files small (~2–8K tokens). If a file grows,
@@ -264,7 +271,7 @@ fn map(target, fresh=false):
 | L3 | Reference — conventions, rules, patterns, skills | 500–2,000 |
 | L4 | Executable constraints — guards and verification checks | variable |
 
-Mapper infers layer from depth + filename when not declared in frontmatter. L0–L1
+Mapper infers layer from depth + filename when not declared in the file. L0–L1
 applies everywhere. L2–L4 applies within directory scope and all children. More
 specific (closer to target) overrides less specific.
 

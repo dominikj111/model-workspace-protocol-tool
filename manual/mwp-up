@@ -97,6 +97,7 @@ mwp-verify.sh
 md-index.sh
 md-index.py
 uninstall.sh
+migrate-to-yaml.sh
 protocol.md
 cache/
 skills/
@@ -117,6 +118,7 @@ fetch_script "$BASE_URL/mwp-verify.sh"      ".mwp/mwp-verify.sh"
 fetch_script "$BASE_URL/md-index.sh"       ".mwp/md-index.sh"
 fetch_file   "$BASE_URL/md-index.py"       ".mwp/md-index.py"
 fetch_script "$BASE_URL/uninstall.sh"       ".mwp/uninstall.sh"
+fetch_script "$BASE_URL/migrate-to-yaml.sh" ".mwp/migrate-to-yaml.sh"
 
 # ── Skill and Hooks ───────────────────────────────────────────────────────────
 mkdir -p .mwp/skills/mwp

@@ -4,7 +4,7 @@ version: "0.3.0"
 
 # Workspace Mapping Protocol
 
-**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → navigate long files with `md-index.sh` → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.md files → Persistence rules → Five context layers.
+**Document Structure:** Bootstrap (generates `topology.md`) → During the session (read map → load cascade once → navigate long files with `md-index.sh` → write to `discoveries.md`) → Context Verification (mwp-verify.sh) → Agentic Skills & Hooks → Creating .mwp-context.yaml files → Persistence rules → Five context layers.
 
 Both files live in `.mwp/`. `topology.md` is regenerable. `discoveries.md` is permanent, human-curated accumulation.
 
@@ -41,13 +41,16 @@ At session start:
 
 When the target is known, follow this sequence **before doing any work**:
 
-1. **Load the .mwp-context.md cascade — run this once per session, not per task.**
+1. **Load the .mwp-context.yaml cascade — run this once per session, not per task.**
 
    ```bash
    bash .mwp/concat-context.sh <target-file-or-directory>
    ```
 
-   This concatenates all `.mwp-context.md` files from project root to the target in order.
+   This concatenates all context files from project root to the target in order.
+   Per directory it uses `.mwp-context.yaml` → `.mwp-context.yml` → legacy
+   `.mwp-context.md`; for YAML files only the `description` key is rendered (it
+   holds the markdown prose — the other keys are metadata for the mapper).
    Running it more than once per session wastes tokens — the cascade is already in context.
    If the task has no clear target yet, ask the user to identify one before running it.
 
@@ -95,18 +98,18 @@ may be at or above the cost of reading the file from the start.
 
 ---
 
-## Creating and Maintaining .mwp-context.md files
+## Creating and Maintaining .mwp-context.yaml files
 
-A `.mwp-context.md` is **not a session memory file** or a work log; it is a strictly **directory-descriptive document**. Think of it as a "mini-AGENTS.md" or "mini-CLAUDE.md" for a specific scope. It defines the terrain, constraints, and additional tooling (skills/hooks) available to any agent operating within that subdirectory.
+A `.mwp-context.yaml` is **not a session memory file** or a work log; it is a strictly **directory-descriptive document**. Think of it as a "mini-AGENTS.md" or "mini-CLAUDE.md" for a specific scope. It defines the terrain, constraints, and additional tooling (skills/hooks) available to any agent operating within that subdirectory.
 
-A `.mwp-context.md` is a brief paragraph — a few sentences — describing what a directory owns,
+A `.mwp-context.yaml` is a brief paragraph — a few sentences — describing what a directory owns,
 its key constraints, and anything non-obvious. It is concatenated with siblings in the
 cascade, so length directly costs tokens for every future session targeting that scope.
 Keep it tight.
 
-**AI/LLM Maintenance:** While primarily human-curated, AI assistants SHOULD propose updates or new `.mwp-context.md` files when they discover stable patterns, architectural decisions, or "surprises" that would benefit future sessions.
+**AI/LLM Maintenance:** While primarily human-curated, AI assistants SHOULD propose updates or new `.mwp-context.yaml` files when they discover stable patterns, architectural decisions, or "surprises" that would benefit future sessions.
 
-While exploring, watch for directories where a `.mwp-context.md` would add lasting value.
+While exploring, watch for directories where a `.mwp-context.yaml` would add lasting value.
 Good candidates:
 
 - sub-project or package root with its own manifest
@@ -119,14 +122,14 @@ would be non-trivial to derive from the code alone.
 
 ### Workflow for Context Files
 
-Before creating or significantly updating a `.mwp-context.md`, ask the user targeted questions. Tell them explicitly that the questions are prompted by the MWP protocol to ensure accuracy rather than inference. Good questions:
+Before creating or significantly updating a `.mwp-context.yaml`, ask the user targeted questions. Tell them explicitly that the questions are prompted by the MWP protocol to ensure accuracy rather than inference. Good questions:
 
 - What does this directory own and what is outside its scope?
 - Are there hard constraints (size budgets, forbidden patterns, required return types)?
 - What stack or tooling decisions apply specifically here?
 - What would surprise a developer opening this directory for the first time?
 
-**Action:** Use `bash .mwp/context-scaffold.sh <dir>` to create a new stub, then replace the comments with the brief paragraph.
+**Action:** Use `bash .mwp/context-scaffold.sh <dir>` to create a new stub, then replace the comments with the brief paragraph. The stub is pure YAML (`schema: 1` + TODO comments) — the paragraph goes into the `description:` key. The `description` is human-authored markdown prose, and it may become the boundary `AGENTS.md` when the directory is extracted into a standalone project or repository — write it as self-contained, readable markdown, never as data.
 
 ---
 
@@ -175,7 +178,7 @@ The map is terrain, not work history. Source code and git history cover the work
 
 L0–L1 applies everywhere. L2–L4 applies within its directory scope and all children.
 More specific (closer to target) overrides less specific when they conflict.
-`.mwp-context.md` at a directory boundary (where `.mwp/` exists) stops upward traversal.
+`.mwp-context.yaml` at a directory boundary (where `.mwp/` exists) stops upward traversal.
 `AGENTS.md`, `AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`, `.cursorrules` (and equivalents)
 stop **downward** traversal: a directory carrying one is a project boundary. From the parent
 map it appears as a leaf entry — name, path, and a short deterministic excerpt (frontmatter
@@ -198,7 +201,7 @@ changes is the generator: `topology.md` is produced by the tool's deterministic 
 instead of `bootstrap.sh`. `discoveries.md` remains human-accumulated findings that the tool
 cannot derive automatically.
 
-**Community modules** (`imports: [git: ...]` in .mwp-context.md frontmatter) are a mwp-tool
+**Community modules** (`imports: [git: ...]` in .mwp-context.yaml) are a mwp-tool
 feature. They are not available in this manual implementation.
 
 **`.mwp/` is the anchor — a directory, not a file.** The manual and the future mwp-tool agree here (proposal §5.1, §5.4): a project is rooted at a `.mwp/` directory whose presence marks the cascade boundary (see "Five context layers"). The anchor config lives at `.mwp/config.toml` (`name`, `members`, `budgets`, `trust`, `directories`, `render` window) — there is no bare `.mwp` file. The directory is a single namespace for everything: committed project data (`topology.md`, `discoveries.md`, skills, hooks, scripts, `intents/`, `pipelines/`) plus generated map and module caches. The manual's shell scripts are superseded by CLI commands (`bootstrap.sh` → `mwp init`, `concat-context.sh` → `mwp map`, `mwp-verify.sh` → `mwp verify`); data carries over. Auto-migration handles the transition.

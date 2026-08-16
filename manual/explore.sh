@@ -59,9 +59,9 @@ find "$TARGET" -maxdepth 3 \
   | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
 echo ""
 
-# ── .mwp-context.md files ──────────────────────────────────────────────────────────
-echo "## .mwp-context.md Files"
-find "$TARGET" -name ".mwp-context.md" \
+# ── Context files (.mwp-context.*) ────────────────────────────────────────────────
+echo "## Context Files (.mwp-context.*)"
+find "$TARGET" \( -name ".mwp-context.yaml" -o -name ".mwp-context.yml" -o -name ".mwp-context.md" \) \
   -not -path '*/node_modules/*' -not -path '*/.git/*' \
   -not -path '*/target/*'       -not -path '*/.mwp/*' \
   | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
@@ -92,14 +92,17 @@ find "$TARGET" -maxdepth 3 \
   | sort | mwp_filter | while IFS= read -r f; do echo "- $f"; done
 echo ""
 
-# ── Nearest ancestor .mwp-context.md cascade ──────────────────────────────────────
-echo "## Ancestor .mwp-context.md Cascade (from project root)"
+# ── Nearest ancestor context cascade ────────────────────────────────────────────────
+echo "## Ancestor Context Cascade (from project root)"
 dir=$(cd "$TARGET" && pwd)
 ancestors=""
 while [ "$dir" != "/" ]; do
-  if [ -f "$dir/.mwp-context.md" ]; then
-    ancestors="$dir/.mwp-context.md\n$ancestors"
-  fi
+  for name in .mwp-context.yaml .mwp-context.yml .mwp-context.md; do
+    if [ -f "$dir/$name" ]; then
+      ancestors="$dir/$name\n$ancestors"
+      break
+    fi
+  done
   if [ -d "$dir/.mwp" ] || [ -f "$dir/.mwp" ]; then
     break
   fi

@@ -1,260 +1,111 @@
 # Handoff: `.mwp-context.md` → `.mwp-context.yaml`
 
-**Story ID:** 00  
-**Status:** ⬜ backlog  
-**Depends on:** nothing  
-**Proposal refs:** §5.2 (context files), §5.3 (modules), §8 (IR)
+**Story ID:** 00 — Context format migration
+**Status:** ⬜ backlog → ✅ done
+**Proposal refs:** §5.2 (context files), §5.3 (modules), §5.4 (cache), §8 (IR), §9 (CLI)
 
 ---
 
-## Why
+## Delivered
 
-The current `.mwp-context.md` format is an awkward hybrid: YAML frontmatter
-(between `---` markers) bolted onto a free-form markdown body. Pure YAML:
+**Format.** The context format is now pure YAML: `.mwp-context.yaml` (canonical),
+`.mwp-context.yml` (alias), body moved into a `description` literal-block key,
+required `schema: 1`. Proposal §5.2 rewritten with a pure-YAML example; the
+granularity-split and interpolation examples updated; "frontmatter" wording
+cleaned up everywhere it described the old format. `docs/format-spec.md` updated
+to current state.
 
-- **Enforces structure.** Every key is explicit; no ambiguity about what is
-  metadata vs. prose.
-- **Enables schema validation.** We can reject malformed files at parse time
-  rather than silently loading partial context.
-- **Keeps format consistency.** `.mwp` (TOML) is structured; `.mwp-module.md`
-  frontmatter is structured; `.mwp-context.yaml` completes the set.
-- **Encourages discipline.** A structured file nudges authors toward thinking in
-  terms of `layer`, `scope`, `imports`, `guards` rather than dumping everything
-  into free-form prose.
-- **Migration is mechanical.** The frontmatter block is already valid YAML. The
-  markdown body just needs to move into a `description` key. No information is
-  lost.
+**Migration script.** New `manual/migrate-to-yaml.sh`: finds `.mwp-context.md`
+files (respecting `.mwpignore`), extracts frontmatter/body (first `---` pair
+only), moves the body into `description` (omitted when empty or stub-only),
+adds `schema: 1`, rewrites legacy `verified_paths: - .mwp-context.md` entries,
+converts tabs, validates via python3-yaml when available, deletes originals only
+after a valid `.yaml` was written. Idempotent; reports migrated/skipped/errors.
 
-This is a **breaking change** — `.mwp-context.md` is not supported after
-migration. A migration script handles all existing files.
+**Reader scripts updated to yaml → yml → md lookup:**
+- `concat-context.sh` — renders only the `description` key from YAML files
+  (markdown prose); legacy `.md` emitted whole; stale-`.md` and yaml+yml
+  warnings
+- `context-scaffold.sh` — creates a minimal `schema: 1` YAML stub; refuses to
+  overwrite yaml/yml/md
+- `bootstrap.sh`, `explore.sh` — find `.mwp-context.*` (all three); ancestor
+  cascade checks yaml → yml → md
+- `changes.sh` — freshness scan includes all three
+- `mwp-verify.sh` — parses `guards:` / `verified_paths:` from pure YAML and
+  legacy frontmatter (shared `yaml_lines` helper); context lookup yaml → yml → md
+- `uninstall.sh` — counts and removes all three
+- `mwp-up` — distributes `migrate-to-yaml.sh`; `.mwp/.gitignore` template updated
 
----
+**Docs:** `manual/protocol.md`, `manual/README.md`, `README.md`,
+`manual/skills/mwp/SKILL.md`, `manual/skills/maintaining-mwp-contexts/SKILL.md`
+updated. `AGENTS.md` rewritten into the structure-guideline shape (49 lines,
+Purpose/Navigation/Rules/Workflow/Validation/Context) and references the new
+format. `docs/index.md` added; `proposal.md` relocated to `docs/proposal.md`
+(separate docs commit).
 
-## The new format
+**Roadmap:** S-00 flipped ✅; "Current state" section added to `ROADMAP.md`.
 
-### Extension
+## Decisions & deviations
 
-- **Official:** `.mwp-context.yaml`
-- **Accepted alias:** `.mwp-context.yml`
-- The mapper looks for `.mwp-context.yaml` first, falls back to `.mwp-context.yml`.
-  Both are never present in the same directory (that's an error).
+- **`md` stays readable (user override).** Handoff 01 originally specified a
+  breaking change (`.mwp-context.md` unsupported after migration). Per the
+  user's instruction, the readers still accept legacy `.mwp-context.md`, and
+  the cascade falls back to it — a partially migrated tree keeps working.
+  `migrate-to-yaml.sh` converts and deletes originals; `mwp lint` is specified
+  to warn on stale `.md` beside `.yaml`.
+- **AGENTS.md-extraction constraint (user instruction).** The `description` key
+  is the content that may become the boundary `AGENTS.md` when a module is
+  extracted to a standalone repo (ties into story 00c's materialised-AGENTS.md
+  design). Documented in proposal §5.2, format-spec, and protocol.md; the
+  migration preserves the body verbatim so the round-trip is lossless.
+- **`verified_paths: - .mwp-context.md`** entries are rewritten to
+  `.mwp-context.yaml` during migration (the old proposal example listed the
+  context file itself).
+- **Pre-existing bug fixed:** `mwp-verify.sh` used `${#VP[@]:-0}`, a bad
+  substitution under bash ≥ 5 — the script aborted whenever a context file
+  existed. Replaced with `${#VP[@]}` (one line, required to verify this story).
+- **Not in scope:** `.mwp-module.md` keeps its markdown+frontmatter format
+  (story 42); bootstrap.sh's pre-existing `mwp_find` eval warnings were left
+  untouched (not part of this story, working code).
+- **Structure work bundled:** `docs/` relocation (proposal + index) and the
+  AGENTS.md rewrite rode along in separate commits — flagged to the user
+  explicitly as guideline-driven, not story-00 scope.
 
-### Schema
+## Verification
 
-```yaml
-# .mwp-context.yaml — minimal valid file
-schema: 1
-layer: 1
-scope: recursive
-```
+- Fixture project (`/tmp/mwp-fixture`): migration converted 3/3 valid files
+  (full-featured, frontmatter-only, stub-only), skipped conflict (yaml sibling)
+  and invalid (no frontmatter) files, rewrote verified_paths, preserved
+  indented markdown and a stray `---` inside the body, idempotent second run.
+- `concat-context.sh`: yaml + yml + legacy md cascade output correct; blank
+  lines and markdown indentation round-trip verbatim; description-only rendering
+  confirmed (no-description files emit only the comment header).
+- `context-scaffold.sh`: creates valid YAML stub; refuses existing yaml/yml/md.
+- `bootstrap.sh` / `explore.sh`: list all three formats; ancestor cascade
+  correct.
+- `mwp-verify.sh`: yaml guards pass/fail/read-only paths correct; legacy md
+  frontmatter guards still parse.
+- `shellcheck 0.10.0` clean on all changed scripts (bootstrap.sh's untouched
+  `mwp_find` helper excluded — pre-existing).
+- Note: no YAML parser available on this host — `validate_yaml` is best-effort
+  (python3+yaml when present); validity was verified by construction against
+  the canonical literal-block form and by round-trip behavior.
 
-```yaml
-# .mwp-context.yaml — full example
-schema: 1
-layer: 3
-scope: recursive
-max_tokens: 1200
-window: 2
-priority: 80
-description: |
-  # Purpose
-  This module owns the browser-side SDK boundary.
+## Known issues
 
-  # Constraints
-  No runtime reflection; prefer compile-time codegen.
+- `migrate-to-yaml.sh` skips a `.md` when a `.yaml`/`.yml` sibling exists
+  (conflict left for the author) — no auto-merge.
+- `concat-context.sh` description extraction assumes the canonical 2-space
+  block indentation; deeper author-chosen indentation leaves extra leading
+  spaces in the rendered body.
+- This repo itself has no `.mwp-context.*` files, so the migration ran against
+  a fixture; projects with real contexts should run
+  `bash .mwp/migrate-to-yaml.sh` and review the diff.
+- python3-yaml validation is optional; a project with python3 but no yaml
+  module gets construction-trust instead.
 
-  # References
-  See ./API.md for the public surface contract.
-imports:
-  - local: ./rules.md
-  - local: ./skills/rust.md
-  - git: https://github.com/mwp-community/rust-idiomatic.git@v2.1.0
-  - workspace: packages/shared-types
-guards:
-  - cmd: cargo test --lib
-    cache_for: 10m
-    trust: project
-verified_paths:
-  - src/api/
-  - tests/smoke/
-owners:
-  - team-backend
-```
+## Hand-off to next story
 
-### Key changes from old format
-
-| Old (`.mwp-context.md`)                           | New (`.mwp-context.yaml`)                  |
-| ------------------------------------------------- | ------------------------------------------ |
-| YAML between `---` markers, then markdown body    | Pure YAML; body in `description` key       |
-| No schema version                                 | `schema: 1` required                       |
-| `---` markers delimiting frontmatter              | No markers — the file is the YAML document |
-| `<!-- MWP CONTEXT ... -->` HTML comment stubs     | Stub is minimal YAML with `description:`   |
-
-### `description` key design
-
-- **Key name:** `description` (not `text`, `body`, or `content`). It describes the
-  directory's purpose, constraints, and non-obvious facts.
-- **Value:** A YAML literal block scalar (`|`) preserving markdown formatting. The
-  markdown syntax (headings, lists, code spans, links) carries over unchanged.
-- **Optional.** A directory with nothing to describe beyond what the structured
-  keys already say can omit `description` entirely. Example: a leaf directory
-  that only needs `layer: 2` and a guard.
-- **One block, not per-section keys.** The user's instruction is to move the
-  markdown body into a single key. We do not break it into structured
-  sub-keys (no `purpose:`, `constraints:`, `references:` at the YAML level).
-  Those remain markdown headings inside `description:`.
-
-### Required vs. optional keys
-
-| Key              | Required | Default           | Notes                                    |
-| ---------------- | -------- | ----------------- | ---------------------------------------- |
-| `schema`         | **Yes**  | —                 | Must be `1`                              |
-| `layer`          | No       | Inferred from depth | L0–L4; mapper infers if omitted        |
-| `scope`          | No       | `recursive`       | `recursive` or `local`                   |
-| `description`    | No       | —                 | Markdown prose (literal block scalar)    |
-| `max_tokens`     | No       | Project budget    | Override per-directory                   |
-| `window`         | No       | `0` (full cascade)| Cap ancestor levels                      |
-| `priority`       | No       | `50`              | Tiebreaker within same layer             |
-| `imports`        | No       | `[]`              | `local:`, `workspace:`, `git:` entries   |
-| `guards`         | No       | `[]`              | Verified-reference checks                |
-| `verified_paths` | No       | `[]`              | Files whose change invalidates guard cache |
-| `owners`         | No       | `[]`              | Who maintains this context               |
-
----
-
-## Migration script
-
-### What it does
-
-1. Finds all `.mwp-context.md` files in the project tree (respecting `.mwpignore`).
-2. For each file:
-   a. Extracts the YAML frontmatter (content between first two `---` markers).
-   b. Extracts the markdown body (everything after the closing `---`).
-   c. Strips leading/trailing whitespace from the body.
-   d. If the body is non-empty and not just an HTML comment stub, sets it as
-      the `description` key (literal block scalar).
-   e. Adds `schema: 1` at the top.
-   f. Writes the result to `<same-path>/.mwp-context.yaml`.
-   g. If the YAML is valid and the output file was written successfully,
-      deletes the original `.mwp-context.md`.
-3. Reports: count of migrated files, any errors, any files that were skipped
-   (already have a `.yaml` sibling, or `.md` was unparseable).
-
-### Script location
-
-`manual/migrate-to-yaml.sh` — shipped alongside the other manual scripts.
-Distributed via `mwp-up` like the others.
-
-### Edge cases
-
-| Case                                          | Behaviour                                              |
-| --------------------------------------------- | ------------------------------------------------------ |
-| No frontmatter (file doesn't start with `---`)| Skip with warning; the file is not valid MWP context   |
-| Empty frontmatter (just `---\n---`)            | Treated as no keys; only `schema: 1` set               |
-| Body is only the HTML comment stub             | `description` omitted (it's the scaffold placeholder)   |
-| Body is only whitespace                       | `description` omitted                                   |
-| `.mwp-context.yaml` already exists alongside   | Skip the `.md` file; warn about conflict                |
-| YAML frontmatter contains tabs                | Convert to spaces before writing (YAML spec requires spaces) |
-| Body contains `---` sequences                 | Only the first pair of `---` is treated as frontmatter delimiters |
-
----
-
-## Two outcomes
-
-### Outcome 1 — Docs updated (every `.mwp-context.md` reference)
-
-Files to update:
-
-| File                | Count of references | Notes                                       |
-| ------------------- | ------------------- | ------------------------------------------- |
-| `proposal.md`       | ~46                 | Largest change. Most are inline path refs.  |
-| `README.md`         | ~4                  | Project overview references.                |
-| `AGENTS.md`         | ~9                  | Commands, layout, project-in-brief.         |
-| `manual/README.md`  | ~9                  | Manual implementation guide.                |
-| `manual/protocol.md`| ~11                 | Protocol specification (condensed).         |
-| `manual/skills/mwp/SKILL.md` | ~2          | Session-start prompt.                       |
-
-**Strategy for `proposal.md`:** Search-and-replace `.mwp-context.md` →
-`.mwp-context.yaml` throughout. There are ~46 instances; most are mechanical.
-Six require prose adjustment:
-
-1. **§5.2 paragraph 1** — The sentence "`.mwp-context.md` is the **index file**
-   for its directory's context" needs rewriting to describe the YAML format.
-2. **§5.2 "Context granularity"** — The example tree shows `.mwp-context.md`
-   split into `.mwp-context.api.md` / `.mwp-context.testing.md`. These become
-   `imports:` entries referencing `.mwp-context.api.yaml` etc.
-3. **§9.0 frontmatter block** — The code example showing YAML frontmatter in a
-   markdown code block should be replaced with the pure-YAML example.
-4. **§5.3 "What a well-formed community module contains"** — Reference to
-   `.mwp-context.md` files in module subdirectories being ignored.
-5. **§5.4 "Commit to version control"** — Bullet about committing
-   `.mwp-context.md` files.
-6. **§8.1 "Incremental delivery"** — Reference to `.mwp-context.md` changing
-   mid-session.
-
-**Strategy for other docs:** Mechanical search-and-replace, plus updating any
-code blocks that show the old format.
-
-### Outcome 2 — Manual scripts updated
-
-Scripts to update:
-
-| Script                  | What changes                                          |
-| ----------------------- | ----------------------------------------------------- |
-| `bootstrap.sh`          | Find `.mwp-context.yaml` instead of `.mwp-context.md` |
-| `concat-context.sh`     | Look for `.yaml`/`.yml`; output YAML `description:`   |
-| `context-scaffold.sh`   | Generate `.mwp-context.yaml` stub instead of `.md`    |
-| `explore.sh`            | Find and report `.mwp-context.yaml` files              |
-| `changes.sh`            | Include `.mwp-context.yaml` in change scanning         |
-| `mwp-verify.sh`         | Parse guards from YAML directly (no `---` markers)    |
-| `search.sh`             | (No code change — searches file contents, not names)   |
-| `uninstall.sh`          | Find/delete `.mwp-context.yaml` instead of `.md`       |
-| `mwp-up`                | Distribute `migrate-to-yaml.sh` alongside other scripts |
-| `skills/mwp/SKILL.md`   | Update `.mwp-context.md` references                   |
-
-**Key implementation notes for `concat-context.sh`:**
-- Output wrapping changes from `<!-- context: path/.mwp-context.md -->` to
-  `<!-- context: path/.mwp-context.yaml -->`.
-- The YAML file's `description` key contains markdown — extract and render it
-  as the body. Other keys (layer, scope, imports, guards) are metadata for the
-  mapper; only `description` is displayed in the concatenated output.
-- If no `description` key exists, emit only the comment header (the directory
-  contributes no prose, only structural metadata).
-
-**Key implementation notes for `context-scaffold.sh`:**
-- Old stub was an HTML comment. New stub is minimal YAML:
-
-```yaml
-schema: 1
-# TODO: Set layer (0–4) and scope (recursive or local).
-#       Add a description, imports, and guards as needed.
-#       See protocol.md for the full schema.
-```
-
-**Key implementation notes for `mwp-verify.sh`:**
-- Currently parses YAML frontmatter from between `---` markers. With pure YAML,
-  the entire file is YAML — just read it with a YAML parser or continue with
-  the same grep-based approach (the `guards:` and `verified_paths:` keys are at
-  the top level, same structure, just no `---` delimiters to skip).
-
----
-
-## Verification (after implementation)
-
-- [ ] `manual/migrate-to-yaml.sh` runs clean on a project with existing
-      `.mwp-context.md` files — all are converted, originals deleted
-- [ ] `manual/migrate-to-yaml.sh` is idempotent — running twice does nothing
-      (second run: no `.md` files to migrate)
-- [ ] `manual/concat-context.sh <target>` produces the same output (semantically)
-      when run against `.mwp-context.yaml` files as it did against `.md` files
-- [ ] `manual/context-scaffold.sh <dir>` creates `.mwp-context.yaml` with valid
-      YAML, not `.mwp-context.md`
-- [ ] `manual/bootstrap.sh` lists `.mwp-context.yaml` files in topology
-- [ ] `manual/mwp-verify.sh` correctly parses `guards:` and `verified_paths:`
-      from pure YAML files
-- [ ] `manual/uninstall.sh` finds and removes `.mwp-context.yaml` files
-- [ ] `manual/skills/mwp/SKILL.md` references `.mwp-context.yaml`
-- [ ] All docs: no remaining `.mwp-context.md` reference (outside of migration
-      notes and changelog)
-- [ ] `proposal.md` code examples show `.mwp-context.yaml` with correct YAML
-- [ ] All manual scripts pass `shellcheck` where applicable
+Next: **00a (skills discovery, handoff 02)** or **00b (format spec)** — human
+pick. Note: `docs/format-spec.md` already exists (456 lines) and was refreshed
+in this story; 00b may be largely done — worth confirming and flipping ✅.

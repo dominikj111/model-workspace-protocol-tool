@@ -23,4 +23,4 @@ proposal amendment** — a stale map is worse than none.
 | Relationship to Engram | §14 |
 
 Companions: [`format-spec.md`](format-spec.md) — normative format extraction;
-`manual/protocol.md` — protocol for the manual implementation.
+[`manual/protocol.md`](../manual/protocol.md) — protocol for the manual implementation.

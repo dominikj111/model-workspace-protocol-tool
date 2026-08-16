@@ -6,13 +6,14 @@
 # TARGET defaults to the current directory.
 #
 # Behaviour:
-#   1. Resolves the nearest .mwp-context.md from TARGET upward.
-#   2. Reads `verified_paths:` from its YAML frontmatter (if present) to scope
+#   1. Resolves the nearest context file from TARGET upward —
+#      .mwp-context.yaml → .mwp-context.yml → .mwp-context.md (legacy).
+#   2. Reads `verified_paths:` from it (pure YAML or legacy frontmatter) to scope
 #      the file hash. Falls back to scanning *.ts, *.tsx, *.js, *.py, *.sh,
-#      *.rs, and .mwp-context.md files under TARGET.
+#      *.rs, and .mwp-context.* files under TARGET.
 #   3. Computes a SHA-256 hash over those files.
 #   4. Cache hit  (.mwp/cache/<hash>.ok exists) → exits 0 immediately.
-#   5. Cache miss → runs `guards:` commands from the frontmatter (if present),
+#   5. Cache miss → runs `guards:` commands from the file (if present),
 #      then builtin checks (tsc --noEmit, pytest -k smoke) when the tools exist.
 #   6. Pass  → writes .mwp/cache/<hash>.ok, exits 0.
 #   7. Fail  → writes .mwp/cache/<hash>.diagnostics.md, appends to
@@ -55,11 +56,13 @@ ok()   { printf "  ${GREEN}✓${NC}  %s\n" "$1"; }
 warn() { printf "  ${YELLOW}⚠${NC}   %s\n" "$1"; }
 err()  { printf "  ${RED}✗${NC}  %s\n" "$1" >&2; }
 
-# ── Find nearest .mwp-context.md ──────────────────────────────────────────────
+# ── Find nearest context file ─────────────────────────────────────────────────────
 find_context_file() {
   local dir="$1"
   while [ "$dir" != "/" ] && [ "$dir" != "$ROOT/.." ]; do
-    [ -f "$dir/.mwp-context.md" ] && { echo "$dir/.mwp-context.md"; return 0; }
+    for name in .mwp-context.yaml .mwp-context.yml .mwp-context.md; do
+      [ -f "$dir/$name" ] && { echo "$dir/$name"; return 0; }
+    done
     dir="$(dirname "$dir")"
   done
   echo ""
@@ -67,18 +70,28 @@ find_context_file() {
 
 CONTEXT_FILE="$(find_context_file "$TARGET")"
 
-# ── Parse verified_paths from YAML frontmatter ────────────────────────────────
-# Reads lines between the first two '---' markers and extracts verified_paths entries.
+# ── YAML source lines for a context file ───────────────────────────────────────
+# Legacy .md files carry YAML between the first pair of `---` markers; pure YAML
+# files (canonical) pass through unchanged.
+yaml_lines() {
+  local file="$1"
+  local first
+  first=$(head -n 1 "$file" 2>/dev/null)
+  if [ "$first" = "---" ]; then
+    awk 'BEGIN{n=0} /^---$/{n++; if (n==2) exit; next} n==1{print}' "$file"
+  else
+    cat "$file"
+  fi
+}
+
+# ── Parse verified_paths from YAML ─────────────────────────────────────────────
+# Extracts entries under a top-level `verified_paths:` key.
 parse_verified_paths() {
   local file="$1"
-  local in_front=0 in_verified=0
+  local in_verified=0
   local paths=()
+  local line
   while IFS= read -r line; do
-    if [ "$in_front" -eq 0 ] && [ "$line" = "---" ]; then
-      in_front=1; continue
-    fi
-    [ "$in_front" -eq 0 ] && break
-    [ "$line" = "---" ] && break
     if echo "$line" | grep -q "^verified_paths:"; then
       in_verified=1; continue
     fi
@@ -86,38 +99,32 @@ parse_verified_paths() {
       if echo "$line" | grep -q "^  - "; then
         path="$(echo "$line" | sed 's/^  - //' | tr -d ' ')"
         paths+=("$path")
-      else
+      elif echo "$line" | grep -q "^[a-z]"; then
         in_verified=0
       fi
     fi
-  done < "$file"
+  done < <(yaml_lines "$file")
   printf '%s\n' "${paths[@]+"${paths[@]}"}"
 }
 
-# ── Parse guards cmds from YAML frontmatter ───────────────────────────────────
+# ── Parse guards cmds from YAML ────────────────────────────────────────────────
 parse_guard_cmds() {
   local file="$1"
-  local in_front=0 in_guards=0 in_entry=0
+  local in_guards=0
+  local line
   while IFS= read -r line; do
-    if [ "$in_front" -eq 0 ] && [ "$line" = "---" ]; then
-      in_front=1; continue
-    fi
-    [ "$in_front" -eq 0 ] && break
-    [ "$line" = "---" ] && break
     if echo "$line" | grep -q "^guards:"; then
       in_guards=1; continue
     fi
     if [ "$in_guards" -eq 1 ]; then
       if echo "$line" | grep -q "^  - cmd:"; then
-        cmd="$(echo "$line" | sed 's/^  - cmd: //' | tr -d ' ')"
-        # Handle multi-word commands (sed leaves them intact, just strip leading spaces)
         cmd="$(echo "$line" | sed 's/^  - cmd: //')"
         echo "$cmd"
       elif echo "$line" | grep -q "^[a-z]"; then
         in_guards=0
       fi
     fi
-  done < "$file"
+  done < <(yaml_lines "$file")
 }
 
 # ── Collect files for hashing ─────────────────────────────────────────────────
@@ -127,7 +134,7 @@ if [ -n "$CONTEXT_FILE" ]; then
   mapfile -t VP < <(parse_verified_paths "$CONTEXT_FILE" 2>/dev/null || true)
 fi
 
-if [ "${#VP[@]:-0}" -gt 0 ] 2>/dev/null; then
+if [ "${#VP[@]}" -gt 0 ] 2>/dev/null; then
   # Use declared verified_paths, resolved relative to context file's directory
   CTX_DIR="$(dirname "$CONTEXT_FILE")"
   for vp in "${VP[@]}"; do
@@ -145,6 +152,7 @@ else
     < <(find "$TARGET" -type f \
         \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" \
            -o -name "*.py" -o -name "*.sh" -o -name "*.rs" \
+           -o -name ".mwp-context.yaml" -o -name ".mwp-context.yml" \
            -o -name ".mwp-context.md" \) \
         ! -path "*/.mwp/*" ! -path "*/node_modules/*" \
         ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/target/*" \
@@ -212,7 +220,7 @@ if [ -n "$CONTEXT_FILE" ]; then
 fi
 
 # Builtin checks — only when the tool exists and no guards were declared
-if [ -z "$CONTEXT_FILE" ] || ! grep -q "^guards:" "$CONTEXT_FILE" 2>/dev/null; then
+if [ -z "$CONTEXT_FILE" ] || ! grep -q "^guards:" <(yaml_lines "$CONTEXT_FILE") 2>/dev/null; then
   if command -v tsc >/dev/null 2>&1; then
     run_check "tsc --noEmit" tsc --noEmit
   fi

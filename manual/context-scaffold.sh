@@ -1,5 +1,5 @@
 #!/bin/bash
-# MWP Context Scaffold — creates a .mwp-context.md stub in a directory
+# MWP Context Scaffold — creates a .mwp-context.yaml stub in a directory
 # Usage: bash .mwp/context-scaffold.sh <directory>
 
 TARGET="${1:-.}"
@@ -22,20 +22,24 @@ fi
 [ ! -d "$_r/.mwp" ] && { echo "Error: .mwp/ not found." >&2; exit 1; }
 cd "$_r" || exit 1
 
-DEST="$TARGET/.mwp-context.md"
+DEST="$TARGET/.mwp-context.yaml"
 
 if [ -f "$DEST" ]; then
-  echo ".mwp-context.md already exists at $DEST" >&2
+  echo ".mwp-context.yaml already exists at $DEST" >&2
   echo "Edit it directly rather than overwriting." >&2
+  exit 1
+fi
+if [ -f "$TARGET/.mwp-context.yml" ] || [ -f "$TARGET/.mwp-context.md" ]; then
+  echo "A .mwp-context.yml/.md already exists at $TARGET — migrate it first (migrate-to-yaml.sh) or edit in place." >&2
   exit 1
 fi
 
 cat > "$DEST" << 'EOF'
-<!-- MWP CONTEXT — replace this entire comment block with a brief paragraph (2-5 sentences).
-     Cover: what this directory owns, key constraints, stack choices specific to this scope,
-     and anything that would surprise a developer opening it for the first time.
-     Keep it tight — this file is loaded into every LLM session targeting this scope. -->
+schema: 1
+# TODO: Set layer (0–4) and scope (recursive or local).
+#       Add a description, imports, and guards as needed.
+#       See protocol.md for the full schema.
 EOF
 
 echo "Created: $DEST"
-echo "Ask the user the MWP protocol questions, then replace the stub with a brief paragraph."
+echo "Ask the user the MWP protocol questions, then replace the comments with a brief paragraph."

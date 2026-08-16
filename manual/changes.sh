@@ -36,7 +36,7 @@ else
   stale=$(find . \
     \( -name "package.json" -o -name "Cargo.toml" -o -name "pyproject.toml" \
        -o -name "go.mod" -o -name "build.gradle" -o -name "pom.xml" \
-       -o -name ".mwp-context.md" \
+       -o -name ".mwp-context.yaml" -o -name ".mwp-context.yml" -o -name ".mwp-context.md" \
        -o -name "Dockerfile" -o -name "docker-compose*.yml" -o -name ".env.example" \
        -o -name "vite.config.*" -o -name "next.config.*" \
        -o -name "*.config.ts" -o -name "*.config.js" \
