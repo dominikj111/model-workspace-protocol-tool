@@ -10,9 +10,10 @@ Story statuses: ⬜ backlog / 🔄 in progress / ✅ done
 
 **Spec/proposal stage — no CLI.** The manual implementation (`manual/`) works and
 delivers the cascade workflow. S-00 (context format → `.mwp-context.yaml`) is done:
-legacy `.mwp-context.md` is still read and `migrate-to-yaml.sh` converts it. All
-remaining cards are backlog; the next story to pick up is 00a (skills discovery,
-handoff 02) or 00b (format spec extraction, `docs/format-spec.md` largely exists).
+legacy `.mwp-context.md` is still read and `migrate-to-yaml.sh` converts it. 00b
+(format spec) is resolved — merged into the proposal; `docs/index.md` is the single
+docs entry point. All remaining cards are backlog; the next story to pick up is 00a
+(skills discovery, handoff 02).
 
 ---
 
@@ -40,7 +41,7 @@ is already YAML; the body just moves to a key), so the cost is low.
 | ID  | Story                                                 | Status | Handoff |
 | --- | ----------------------------------------------------- | ------ | ------- |
 | 00a | Agent Skills: make discoverable by pi.dev/harnesses    | ⬜      | [handoff](handoffs/02-skills-discovery.md) |
-| 00b | Extract format spec from proposal (`docs/format-spec.md`)  | ⬜      | — |
+| 00b | Format spec — resolved: merged into proposal (`docs/index.md` is the entry point) | ✅      | — |
 | 00c | Project boundaries: excerpt + soft re-anchoring             | ⬜      | — |
 
 **Goal (00a):** The MWP skills ship in `manual/skills/` and `mwp-up` installs them to
@@ -49,12 +50,13 @@ to `.agents/skills/mwp/` (standard cross-tool location), add cwd-assumption note
 to skill files, namespace names (`mwp-core`, `mwp-handoff`, `mwp-mapping`), and
 document per-tool bridges in the post-install message.
 
-**Goal (00b):** Extract normative format definitions, algorithms, and schemas
-from the proposal into `docs/format-spec.md`. ~300 lines, no rationale — just
-the implementation contract. States up front that the proposal is authoritative.
-This is the quick-reference for manual script authors and the eventual Rust
-developer. Will need a refresh pass after story 00 (`.mwp-context.yaml`
-migration changes the context file format).
+**Goal (00b): RESOLVED.** A separate `docs/format-spec.md` extraction was written
+then removed as redundant: the proposal is navigable via `docs/index.md` (topic →
+section) and `md-index.sh` (section → lines), and a second normative copy doubles
+the sync surface on every amendment. The genuinely additive part — the context
+file's required/optional key table — was transplanted into proposal §5.2. The
+proposal remains the single authoritative design contract; `docs/index.md` is the
+entry point.
 
 **Goal (00c):** Amend proposal §5.2 — boundary files (`AGENTS.md`,
 `AGENTS.override.md`, `CONTEXT.md`, `CLAUDE.md`, `.cursorrules`) become soft
@@ -67,8 +69,7 @@ leaf with excerpt and no internal context; `mwp map` targeting a file inside a
 boundary directory produces a map rooted at that directory; `mwp lint` flags a
 context file beside a boundary file; a materialised `AGENTS.md` (`mwp template`)
 carries a `description:` frontmatter — `AGENTS.tpl.md` includes it so parent
-maps show a useful excerpt. Reflect in `manual/protocol.md` and
-`docs/format-spec.md`.
+maps show a useful excerpt. Reflect in `manual/protocol.md`.
 
 ---
 

@@ -420,6 +420,23 @@ interpolate: true           # optional: resolve {{name}} placeholders from the v
 
 The `description` is **human-authored markdown prose**, carried verbatim into the map — the tool assembles and truncates, it never invents or summarises. It is also the content that may become an `AGENTS.md` when the directory is extracted into a standalone project or repository (see "LLM instruction files as project boundaries" below): a materialised `AGENTS.md` carries a `description:` frontmatter with the same role, and the context's `description` becomes that file's body. Authors therefore write it as self-contained, readable markdown — like a mini-AGENTS.md — never as data. A directory with nothing to describe beyond what the structured keys already say may omit `description` entirely.
 
+**Required vs. optional keys:**
+
+| Key | Required | Default | Notes |
+|-----|----------|---------|-------|
+| `schema` | **Yes** | — | Must be `1` |
+| `layer` | No | Inferred from depth | L0–L4; mapper infers if omitted |
+| `scope` | No | `recursive` | `recursive` or `local` |
+| `description` | No | — | Markdown prose (literal block scalar) |
+| `max_tokens` | No | Project budget | Override per-directory |
+| `window` | No | `0` (full cascade) | Cap ancestor levels |
+| `priority` | No | `50` | Tiebreaker within same layer |
+| `imports` | No | `[]` | `local:`, `workspace:`, `git:` entries |
+| `guards` | No | `[]` | Verified-reference checks (§7) |
+| `verified_paths` | No | `[]` | Files whose change invalidates guard cache |
+| `owners` | No | `[]` | Who maintains this context |
+| `interpolate` | No | `false` | Opt-in placeholder resolution (§5.6) |
+
 #### Import path rules
 
 The cascade handles **vertical** relationships (ancestor → descendant) automatically. **Horizontal** relationships (sibling sub-projects) require an explicit import kind.

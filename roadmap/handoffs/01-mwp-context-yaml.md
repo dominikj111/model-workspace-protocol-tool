@@ -106,6 +106,8 @@ format. `docs/index.md` added; `proposal.md` relocated to `docs/proposal.md`
 
 ## Hand-off to next story
 
-Next: **00a (skills discovery, handoff 02)** or **00b (format spec)** — human
-pick. Note: `docs/format-spec.md` already exists (456 lines) and was refreshed
-in this story; 00b may be largely done — worth confirming and flipping ✅.
+Next: **00a (skills discovery, handoff 02)**. Note: `docs/format-spec.md` was
+removed in the 00b resolution (merged into the proposal — its key table now
+lives in §5.2; `docs/index.md` is the entry point). The handoff skill was also
+removed in a later chore (its mwp-specific parts folded into the mwp skill) —
+00a's rename plan for `mwp-handoff` is stale; only `mwp` + `mapping` remain.
