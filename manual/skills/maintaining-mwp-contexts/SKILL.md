@@ -1,9 +1,14 @@
 ---
 name: maintaining-mwp-contexts
 description: Use when meeting an unknown or foreign repository, module, or site; when working in a repository that carries MWP context files (.mwp-context.md / .mwp-context.yml) or boundary files (AGENTS.md, CONTEXT.md, CLAUDE.md, llms.txt); when a context file contradicts the code, sits at the wrong cascade level, or is missing where a directory has conventions worth stating.
+origin: mwp-tool
 ---
 
 # Maintaining MWP Context Files
+
+**Origin:** this skill ships with the MWP tool (`manual/skills/`, installed via
+`mwp-up`). Skill libraries that carry a copy keep it in sync with upstream —
+edit the tool's copy, then re-copy.
 
 ## Overview
 
