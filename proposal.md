@@ -120,6 +120,42 @@ Doing this by hand is possible — it is what the author currently does — but 
 
 A small, deterministic workspace mapper addresses all five.
 
+### 1.6 Use case: labelling unknown repositories and growing a knowledge base
+
+Beyond orienting a session, the cascade has a second job: **labelling**. The context
+files (`.mwp-context.md` / `.mwp-context.yml` — "mwp ctxs") are the map's terrain pins
+and flags. An assistant exploring an unknown or foreign repository reads them as
+labels: what this directory is, what it owns, what it must not do. A repository that
+carries mwp ctxs can be **acknowledged and labelled automatically** — the assistant
+orients from the pins instead of re-deriving everything from source. For large
+projects with no documentation this turns the cascade into the **first frontier of a
+software/solution knowledge base**: orientation facts accrue at the map layer before
+they ever reach the docs.
+
+The same idea already exists in a condensed form: **`llms.txt`** — a small,
+AI-targeted file (plain text; markdown only where headers help) that lets an assistant
+understand a module, site, or app *without exploring its source or content*, and can
+double as a **router** pointing at specific files. An npm module may already carry a
+README, an `AGENTS.md`, JSDoc, tests — mwp ctxs join that family of descriptors, with
+one difference: they sit *inside* the tree at the level they describe, not at the
+root. Combined, **llms.txt + mwp is the strongest labelling layer available for any
+system**: llms.txt as the module's condensed, routable identity; mwp ctxs as the
+terrain pins that extend that identity down to every meaningful directory.
+
+Context files are therefore **living artifacts, not stones**: they are revised,
+reviewed, pruned, extended, and adjusted as the codebase evolves. Parts may be
+**elevated up** — a general convention graduates from a ctx file into the project's
+docs, proposal, or agent instruction files — or **pushed down** when a fact turns out
+to be local. Curation remains the gate: the proposal requires ctxs to be curated, but
+that is not a reason to deny AI-edits. This document itself is AI-generated and then
+curated; ctx files deserve the same treatment. Human review is what makes a ctx file
+authoritative — not the identity of its author.
+
+The boundary rule from §5.2.4 applies at module roots: when a module already carries a
+boundary file (`AGENTS.md`, `CONTEXT.md`, `llms.txt`, …), no mwp ctx file is placed
+beside it — the `.mwp/` directory is the correct home when the module defines its own
+mwp tooling.
+
 ---
 
 ## 2. Non-goals
@@ -144,7 +180,7 @@ If any of these turn out to be valuable later, they are separate proposals.
 1. **Determinism.** Same inputs → same output. No probabilistic ranking inside the mapper.
 2. **Explainability.** Every item in the map traces back to a file path, a rule, and a priority.
 3. **Bounded budgets.** Every layer has a token cap. Exceeding it is an error the user resolves, not something the tool silently truncates.
-4. **Human authorship.** The map is built from what the user wrote (or what someone else wrote and the user explicitly imported). The tool does not invent.
+4. **Human curation.** The map is built from what the user wrote or explicitly imported — but authorship and curation are different gates. An AI may draft or edit a context file; what makes it authoritative is human review and approval (this proposal itself is AI-generated and then curated). What the tool never does is invent: the mapper assembles, it does not generate.
 5. **Map, not terrain.** The output is a navigable map of the workspace, not a reproduction of it. Source code is primary; the markdown files are the map layer alongside it. The LLM reads the map, then explores the actual files as needed.
 6. **Filesystem as architecture.** The tree is the spine. Frontmatter is the connective tissue. Code is a signal, not a source of truth for intent.
 7. **Static by default, dynamic on request.** File reads are free; script execution requires explicit opt-in and is cached.
@@ -408,9 +444,12 @@ The root `.mwp-context.md` remains the cascade entry point and declares the impo
 #### LLM instruction files as project boundaries
 
 `AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CONTEXT.md`, `.cursorrules`,
-and equivalent files mark a **project boundary** during cascade traversal (the
-set is configurable; `.mwp-context.*` is never a boundary — it is the tool's own
-file). Two anchor kinds exist:
+`llms.txt`, and equivalent files mark a **project boundary** during cascade
+traversal (the set is configurable; `.mwp-context.*` is never a boundary — it is
+the tool's own file). These files are one family of descriptors alongside README,
+JSDoc, and tests: a module may carry several; mwp ctxs are just one more member
+of that family — which is why they must not sit beside a boundary file at the
+same level (see the lint rule below). Two anchor kinds exist:
 
 - **Hard anchor** — `.mwp/` with `config.toml`. Controls budgets, trust,
   members; the cascade boundary (§5.1).
@@ -446,7 +485,9 @@ Consequences:
 - `mwp lint` reports a warning when a directory has both a `.mwp-context.*` and
   a boundary file — a conflict; the two are mutually exclusive at the same
   directory level (a project root carries its L0 identity in the boundary file,
-  never in a context file beside it).
+  never in a context file beside it). When a module defines its own mwp tooling,
+  the `.mwp/` directory is its correct home: the boundary file owns the root,
+  mwp ctxs live below it.
 
 ### 5.3 Modules
 
