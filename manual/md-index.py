@@ -17,7 +17,15 @@ def extract_headers(lines):
     fenced = False
     fence_tok = None
 
-    i = 0
+    # Skip YAML frontmatter (--- … ---) so its keys are not indexed as setext headers
+    start = 0
+    if n > 0 and lines[0].strip() == '---':
+        for j in range(1, n):
+            if lines[j].strip() == '---':
+                start = j + 1
+                break
+
+    i = start
     while i < n:
         line = lines[i]
 

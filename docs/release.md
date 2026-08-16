@@ -38,10 +38,16 @@ That is the release. Nothing else to publish.
       correctly (older → reinstall, equal → up to date)
 - [ ] Cascade: `concat-context.sh` on a mixed tree (yaml + yml + legacy md)
 - [ ] `migrate-to-yaml.sh` converts in place and is idempotent
-- [ ] `md-index.sh <file> --format text` outputs headers only
+- [ ] `md-index.sh <file> --format text` outputs headers only, frontmatter ignored
 - [ ] Markdown output proofread (protocol.md, README.md)
 
 ## Changelog
+
+### 0.4.1 — 2026-08-16
+
+- `md-index.py` ignores YAML frontmatter — a `version:` key was being indexed
+  as a phantom setext header (the closing `---` matched the setext underline
+  regex). Absolute line numbers unchanged.
 
 ### 0.4.0 — 2026-08-16
 
