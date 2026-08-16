@@ -32,7 +32,7 @@ repository is a design specification intended to guide the eventual Rust impleme
 
 ## Read the spec
 
-→ [proposal.md](proposal.md)
+→ [docs/proposal.md](docs/proposal.md) — or start with the [design index](docs/index.md)
 
 ## Key ideas
 

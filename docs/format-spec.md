@@ -1,7 +1,7 @@
 # MWP Format Specification
 
 Normative extraction of file formats, algorithms, and schemas from the proposal.
-The proposal (`proposal.md`) is authoritative; this is a convenience reference.
+The proposal (`docs/proposal.md`) is authoritative; this is a convenience reference.
 On conflict, the proposal wins.
 
 **Proposal refs:** §5 (on-disk convention), §6 (resolution algorithm), §7 (verified
