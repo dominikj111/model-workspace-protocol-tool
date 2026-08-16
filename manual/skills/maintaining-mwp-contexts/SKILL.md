@@ -1,6 +1,6 @@
 ---
 name: maintaining-mwp-contexts
-description: Use when meeting an unknown or foreign repository, module, or site; when working in a repository that carries MWP context files (.mwp-context.yaml, legacy .mwp-context.md) or boundary files (AGENTS.md, CONTEXT.md, CLAUDE.md, llms.txt); when a context file contradicts the code, sits at the wrong cascade level, or is missing where a directory has conventions worth stating.
+description: Use when working in a repository with MWP installed — `.mwp/` plus context files (`.mwp-context.yaml`, legacy `.mwp-context.md`) — and the current change affects a context file, one contradicts the code, sits at the wrong cascade level, or is missing where a directory's conventions are worth stating. Includes ancestor cascade levels outside the git root. Not for orientation or labelling in repositories without MWP.
 origin: mwp-tool
 ---
 
@@ -18,12 +18,20 @@ evolves. The assistant may draft and edit; human review makes a file authoritati
 
 ## When to Use
 
-- Meeting an unknown or foreign repository, module, or site — orient from labels
-  before exploring source; propose labels where none exist.
-- Working in a repository that carries MWP context files or boundary files — work
-  that invalidates a file updates it in the same change.
+- Meeting an unknown part of the MWP-managed scope — a module, directory, or outer
+  cascade level — orient from labels before exploring source; propose labels where
+  none exist.
+- Working in an MWP-installed repository — work that invalidates a context file
+  updates it in the same change.
 - A context file contradicts the code, is stale, or a convention sits at the wrong
   cascade level — fix it, elevate it, or push it down.
+
+**Scope boundary:** the skill operates only on the context cascade of the repository
+this assistant is opened in — context files in the repo, plus `.mwp-context.*` in
+ancestor directories the cascade reads (which can sit outside the git root when the
+repo is nested in a larger MWP-managed workspace). Repositories, modules, or sites
+without MWP context files are out of scope: meeting one is plain orientation — read
+its boundary files, never propose or create `.mwp-context.*` there.
 
 **When NOT to use:** reading only, no file affected, no labels missing — do not
 touch context files; no speculative context gardening.

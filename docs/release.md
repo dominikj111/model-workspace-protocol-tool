@@ -43,6 +43,14 @@ That is the release. Nothing else to publish.
 
 ## Changelog
 
+### 0.4.2 — 2026-08-16
+
+- `maintaining-mwp-contexts` skill: trigger narrowed from "any foreign repository"
+  to MWP-installed repositories. Scope boundary documented — the context cascade of
+  the opened repository, including ancestor `.mwp-context.*` levels outside the
+  git root; repositories without MWP context files are out of scope (orientation
+  only, no context maintenance).
+
 ### 0.4.1 — 2026-08-16
 
 - `md-index.py` ignores YAML frontmatter — a `version:` key was being indexed
