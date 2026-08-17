@@ -43,6 +43,41 @@ repository is a design specification intended to guide the eventual Rust impleme
 - **Spread memory** — orientation knowledge distributed across the tree at the level it describes: scoped retrieval, error isolation, and cross-module convention propagation — RAG's motivation without RAG's mechanism (resolution stays path-based and explainable)
 - **MCP server** — same binary, exposes the mapper to any MCP-aware LLM client with incremental delta delivery per connection
 
+## When to use it — and when to skip it
+
+Honest guidance, from real use. MWP is a **map layer, not content**: it makes orientation
+cheap and repeatable, but the map is only as good as its upkeep. A stale map misleads worse
+than no map — expect to maintain the `.mwp-context.yaml` cascade as the project changes.
+
+**MWP earns its place when:**
+
+- The project is **large or sprawling** — many directories, modules, or sub-projects where
+  finding the right context is the expensive part of a session.
+- **Multiple agents or contributors** work in the repo, or you onboard new ones frequently —
+  orientation becomes repeatable instead of tribal knowledge.
+- You want **deterministic, budgeted context**: the same map every time, token-aware, so a
+  session starts oriented without dumping the whole tree.
+- You work across **many projects** and want one consistent orientation workflow — the same
+  cascade everywhere, plus reusable **community modules** (pinned imports of domain
+  expertise) instead of rewriting conventions per repo.
+- **Session continuity** matters: the cascade + handoffs keep a coherent picture across
+  sessions, and verified references (guard scripts) confirm constraints before the map
+  claims them.
+
+**Skip it when:**
+
+- The project is **small and already well-oriented** — a good `AGENTS.md` + roadmap + docs
+  index often beats a context map. MWP pays off when orientation is genuinely expensive;
+  for a single-crate, one-contributor repo it is usually overhead.
+- You're the **only contributor** and carry the structure in your head — the upkeep can
+  outlive the benefit.
+- You **won't maintain the cascade** — again: a stale map misleads worse than none.
+- The repo is **public and deliberately minimal** — every tool layer is surface; map the
+  project when it grows, not from day one, unless you want to map from the start.
+
+If in doubt: start without it, and adopt MWP when not being oriented starts costing more
+than maintaining the map.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).

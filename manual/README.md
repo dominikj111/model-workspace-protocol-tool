@@ -7,6 +7,9 @@ The idea: instead of re-deriving project structure and conventions from scratch 
 give your AI assistant a persistent, cumulative map of the project — topology, conventions,
 boundaries — assembled once and enriched over time.
 
+> **Is MWP right for your project?** Honest guidance — when it earns its place and when to
+> skip it — in [README.md](../README.md) ("When to use it — and when to skip it").
+
 ---
 
 ## Quickstart
